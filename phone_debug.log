@@ -60,3 +60,8 @@
 [2026-07-19 08:19:01.109127] Table: 2, Phone: '', Note: 'Tên khách: thuận'
 [2026-07-19 08:22:55.479260] Table: 2, Phone: '', Note: 'Tên khách: thuận'
 [2026-07-19 08:24:15.668885] Table: 2, Phone: '', Note: 'Tên khách: thuận'
+[2026-07-21 08:25:54.219326] Table: 6, Phone: '0812345678', Note: 'Tên khách: tân'
+[2026-07-21 08:37:49.294871] Table: 4, Phone: '', Note: 'Tên khách: thuan'
+[2026-07-21 11:27:36.214795] Table: 2, Phone: '', Note: ''
+[2026-07-21 11:28:16.617689] Table: 2, Phone: '', Note: ''
+[2026-07-21 11:30:23.678076] Table: 2, Name: 'Test', Phone: '0912345678', Note: '', Items: [{'name': 'Coca Cola', 'qty': 1, 'price': 15000, 'category': 'Thuc uong', 'note': ''}]

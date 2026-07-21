@@ -92,9 +92,15 @@ def start_redis_listener_thread(loop):
 
                 # Ghi trực tiếp vào Redis Key (latest_ai_event) để Web API đọc được ngay lập tức
                 payload_str = json.dumps(ws_payload)
-                print(f"[API DEBUG] Đã đẩy {len(payload_str)} bytes lên Web API (AJAX Polling)...")
+                print(f"[API DEBUG] Đã đẩy {len(payload_str)} bytes lên Web API (AJAX Polling & WebSocket)...")
                 redis_client.set('latest_ai_event', payload_str)
                 websocket_manager.latest_payload = payload_str
+                
+                # Push via websocket
+                asyncio.run_coroutine_threadsafe(
+                    websocket_manager.broadcast(payload_str), 
+                    loop
+                )
 
         except Exception as e:
             print(f"[API] Mat ket noi Redis trong Thread: {e}")

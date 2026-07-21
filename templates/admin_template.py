@@ -1,3 +1,1581 @@
+# Admin Dashboard HTML Template
+
+admin_html = """<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <title>Bida Club - Dashboard</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%);
+            min-height: 100vh;
+            color: #e0e0e0;
+            overflow-x: hidden;
+        }
+
+        /* === HEADER === */
+        .header {
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            padding: 16px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .logo-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            box-shadow: 0 4px 15px rgba(99,102,241,0.4);
+        }
+
+        .header-title {
+            font-size: 20px;
+            font-weight: 700;
+            background: linear-gradient(90deg, #c4b5fd, #818cf8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+
+        .header-sub {
+            font-size: 12px;
+            color: #9ca3af;
+            font-weight: 400;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        /* === STATS BAR === */
+        .stats-bar {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .stat-chip {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 20px;
+            padding: 6px 16px;
+            font-size: 13px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.3s ease;
+        }
+
+        .stat-chip .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: pulse-dot 2s infinite;
+        }
+
+        .dot-green { background: #22c55e; box-shadow: 0 0 8px #22c55e; }
+        .dot-red { background: #ef4444; box-shadow: 0 0 8px #ef4444; }
+
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.8); }
+        }
+
+        #clock {
+            font-size: 14px;
+            font-weight: 600;
+            color: #a5b4fc;
+            font-variant-numeric: tabular-nums;
+        }
+
+        /* === STATUS BANNER === */
+        .status-banner {
+            margin: 20px 30px 0;
+            padding: 14px 24px;
+            border-radius: 14px;
+            font-size: 14px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.5s ease;
+        }
+
+        .status-connecting {
+            background: rgba(59,130,246,0.15);
+            border: 1px solid rgba(59,130,246,0.3);
+            color: #93c5fd;
+        }
+
+        .status-connected {
+            background: rgba(34,197,94,0.15);
+            border: 1px solid rgba(34,197,94,0.3);
+            color: #86efac;
+        }
+
+        .status-error {
+            background: rgba(239,68,68,0.15);
+            border: 1px solid rgba(239,68,68,0.3);
+            color: #fca5a5;
+        }
+
+        /* === MAIN CONTENT (2-COLUMN GRID) === */
+        .main-content {
+            padding: 20px 30px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 30px;
+        }
+
+        .dashboard-col {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .section-label {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #8b949e;
+            margin-bottom: 8px;
+        }
+
+        /* === TABLES GRID === */
+        .tables-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        .cameras-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+
+        .table-card {
+            background: rgba(255,255,255,0.04);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 20px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .table-card:hover {
+            transform: translateY(-4px) scale(1.01);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+            border-color: rgba(255,255,255,0.15);
+        }
+
+        .table-card.playing {
+            border-color: rgba(99,102,241,0.6);
+            background: rgba(99,102,241,0.06);
+            box-shadow: 0 8px 30px rgba(99,102,241,0.2), inset 0 0 15px rgba(99,102,241,0.1);
+        }
+
+        .table-card.playing:hover {
+            box-shadow: 0 15px 40px rgba(99,102,241,0.3), inset 0 0 20px rgba(99,102,241,0.15);
+            border-color: rgba(99,102,241,0.8);
+        }
+
+        .table-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .table-name {
+            font-size: 17px;
+            font-weight: 800;
+            color: white;
+        }
+
+        .table-badges {
+            display: flex;
+            gap: 6px;
+        }
+
+        @keyframes gradientMove {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .badge-vip {
+            background: linear-gradient(135deg, #fbbf24, #d97706, #fbbf24);
+            background-size: 200% 200%;
+            animation: gradientMove 3s ease infinite;
+            color: #1e1b4b;
+            font-size: 10px;
+            font-weight: 800;
+            padding: 2px 6px;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+
+        .badge-std {
+            background: rgba(255,255,255,0.1);
+            color: #e5e7eb;
+            font-size: 10px;
+            font-weight: 600;
+            padding: 2px 6px;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+
+        .badge-type {
+            background: rgba(99,102,241,0.2);
+            color: #a5b4fc;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
+            text-transform: uppercase;
+        }
+
+        .table-status-label {
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .status-empty { color: #9ca3af; }
+        .status-playing { color: #86efac; animation: pulse-text 2s infinite; }
+
+        @keyframes pulse-text {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .table-details {
+            font-size: 12px;
+            color: #9ca3af;
+            line-height: 1.6;
+            background: rgba(0,0,0,0.25);
+            padding: 12px;
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            border: 1px solid rgba(255,255,255,0.03);
+        }
+
+        .order-btn-group {
+            display: flex;
+            gap: 8px;
+            margin-top: 4px;
+            flex-wrap: wrap;
+        }
+
+        /* === CARD BASE === */
+        .card {
+            background: rgba(255,255,255,0.04);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+        }
+
+        .card-header-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #c4b5fd;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* === LIVE CAM STYLING === */
+        .live-stream-container {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 16/9;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .live-stream-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .live-tag {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            background: #ef4444;
+            color: white;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            animation: blink 1.5s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* === HIGHLIGHT STYLING === */
+        .highlight-desc {
+            font-size: 13px;
+            color: #9ca3af;
+            margin-bottom: 16px;
+            line-height: 1.5;
+        }
+
+        .highlight-status {
+            font-size: 13px;
+            font-weight: 600;
+            padding: 10px 16px;
+            border-radius: 10px;
+            margin-top: 12px;
+            display: none;
+        }
+
+        .highlight-processing {
+            background: rgba(59,130,246,0.15);
+            color: #93c5fd;
+            border: 1px solid rgba(59,130,246,0.3);
+        }
+
+        .highlight-ready {
+            background: rgba(34,197,94,0.15);
+            color: #86efac;
+            border: 1px solid rgba(34,197,94,0.3);
+        }
+
+        .clips-list {
+            margin-top: 16px;
+        }
+
+        .clip-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 14px;
+            background: rgba(255,255,255,0.04);
+            border-radius: 10px;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+
+        .clip-item-name {
+            color: #e5e7eb;
+            font-weight: 500;
+        }
+
+        .clip-item-size {
+            color: #8b949e;
+            font-size: 12px;
+        }
+
+        /* === EVENT CARDS === */
+        .event-card {
+            background: rgba(255,255,255,0.05);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+            animation: slideIn 0.4s ease-out;
+            transition: all 0.3s ease;
+        }
+
+        .event-card:hover {
+            background: rgba(255,255,255,0.08);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+        }
+
+        .event-card.urgent {
+            border-left: 4px solid #f59e0b;
+            box-shadow: 0 0 20px rgba(245,158,11,0.15);
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-20px) scale(0.97); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .event-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+        .event-badge {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 4px 10px;
+            border-radius: 6px;
+        }
+
+        .badge-hand {
+            background: rgba(245,158,11,0.2);
+            color: #fbbf24;
+            border: 1px solid rgba(245,158,11,0.3);
+        }
+
+        .badge-motion {
+            background: rgba(59,130,246,0.2);
+            color: #93c5fd;
+            border: 1px solid rgba(59,130,246,0.3);
+        }
+
+        .event-time {
+            font-size: 12px;
+            color: #8b949e;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .event-message {
+            font-size: 15px;
+            font-weight: 500;
+            color: #e5e7eb;
+            margin-bottom: 14px;
+            line-height: 1.5;
+        }
+
+        .event-image {
+            width: 100%;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.08);
+            margin-bottom: 16px;
+        }
+
+        .event-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        /* === BUTTONS === */
+        .btn {
+            border: none;
+            padding: 10px 22px;
+            border-radius: 10px;
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-confirm {
+            background: linear-gradient(135deg, #22c55e, #16a34a, #22c55e);
+            background-size: 200% 200%;
+            animation: gradientMove 4s ease infinite;
+            color: white;
+            box-shadow: 0 4px 12px rgba(34,197,94,0.3);
+        }
+
+        .btn-confirm:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(34,197,94,0.5); }
+        .btn-confirm:active { transform: translateY(0) scale(0.96); }
+
+        .btn-dismiss {
+            background: rgba(239,68,68,0.15);
+            color: #fca5a5;
+            border: 1px solid rgba(239,68,68,0.2);
+        }
+
+        .btn-dismiss:hover { background: rgba(239,68,68,0.25); transform: translateY(-2px); }
+
+        .btn-highlight {
+            background: linear-gradient(135deg, #8b5cf6, #6366f1);
+            color: white;
+            box-shadow: 0 4px 12px rgba(99,102,241,0.3);
+        }
+
+        .btn-highlight:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(99,102,241,0.4); }
+
+        .btn-download {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+            box-shadow: 0 4px 12px rgba(245,158,11,0.3);
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-download:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(245,158,11,0.4); }
+
+        .btn-small {
+            padding: 6px 12px !important;
+            font-size: 11px !important;
+            border-radius: 6px !important;
+        }
+
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .event-resolved {
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 8px;
+            padding: 6px 12px;
+            border-radius: 8px;
+            display: inline-block;
+        }
+
+        .resolved-confirmed {
+            background: rgba(34,197,94,0.15);
+            color: #86efac;
+        }
+
+        .resolved-dismissed {
+            background: rgba(239,68,68,0.15);
+            color: #fca5a5;
+        }
+
+        /* === TIME MACHINE STYLING === */
+        .time-machine-container {
+            border-top: 1px solid rgba(255,255,255,0.08);
+            padding-top: 20px;
+            margin-top: 20px;
+        }
+
+        .time-machine-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #a5b4fc;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .time-machine-row {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .time-input {
+            background: rgba(255,255,255,0.06);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 8px;
+            color: white;
+            padding: 9px 12px;
+            font-family: inherit;
+            font-size: 13px;
+            outline: none;
+            flex: 1;
+        }
+
+        /* === EMPTY STATE === */
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6b7280;
+        }
+
+        .empty-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .empty-text {
+            font-size: 15px;
+            font-weight: 500;
+        }
+
+        .empty-sub {
+            font-size: 13px;
+            margin-top: 6px;
+            color: #4b5563;
+        }
+
+        /* === SOUND TOGGLE === */
+        .sound-toggle {
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 10px;
+            padding: 8px 14px;
+            color: #e0e0e0;
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .sound-toggle:hover { background: rgba(255,255,255,0.12); }
+        .sound-toggle.active { background: rgba(99,102,241,0.2); border-color: rgba(99,102,241,0.4); color: #a5b4fc; }
+
+        /* === HAMBURGER BUTTON === */
+        .menu-toggle-btn {
+            background: none;
+            border: none;
+            color: #c4b5fd;
+            font-size: 26px;
+            cursor: pointer;
+            padding: 4px 10px;
+            border-radius: 8px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 12px;
+        }
+
+        .menu-toggle-btn:hover {
+            background: rgba(255,255,255,0.08);
+            color: white;
+        }
+
+        /* === LAYOUT WITH SIDEBAR === */
+        .app-container {
+            display: flex;
+            min-height: calc(100vh - 75px);
+            position: relative;
+        }
+
+        .sidebar {
+            width: 260px;
+            background: rgba(15,12,41,0.6);
+            backdrop-filter: blur(25px);
+            -webkit-backdrop-filter: blur(25px);
+            border-right: 1px solid rgba(255,255,255,0.08);
+            padding: 30px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 90;
+        }
+
+        .sidebar.collapsed {
+            width: 0;
+            padding: 30px 0;
+            overflow: hidden;
+            border-right: none;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .sidebar-section {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .sidebar-section-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: #8b949e;
+            letter-spacing: 1.5px;
+            margin-bottom: 8px;
+            padding-left: 12px;
+        }
+
+        .sidebar-link {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #9ca3af;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+            padding: 12px 16px;
+            border-radius: 12px;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+
+        .sidebar-link:hover {
+            background: rgba(255,255,255,0.06);
+            color: white;
+        }
+
+        .sidebar-link.active {
+            background: rgba(99,102,241,0.15);
+            border: 1px solid rgba(99,102,241,0.3);
+            color: #a5b4fc;
+        }
+
+        /* === MAIN CONTENT WRAPPER === */
+        .main-content-wrapper {
+            flex: 1;
+            padding: 24px 30px;
+            transition: all 0.3s ease;
+            overflow-x: hidden;
+        }
+
+        /* === RIGHT DRAWER (NGĂN KÉO TRƯỢT) === */
+        .drawer {
+            position: fixed;
+            top: 0;
+            right: 0;
+            width: 385px;
+            height: 100%;
+            background: #0f0c29;
+            background: linear-gradient(to bottom, #14113c, #0d0a21);
+            border-left: 1px solid rgba(255,255,255,0.12);
+            box-shadow: -10px 0 40px rgba(0,0,0,0.6);
+            z-index: 1100;
+            transform: translateX(100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .drawer.open {
+            transform: translateX(0);
+        }
+
+        .drawer-header {
+            padding: 24px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .drawer-header h3 {
+            font-size: 16px;
+            font-weight: 800;
+            color: #fbbf24;
+            margin: 0;
+        }
+
+        .drawer-close {
+            background: none;
+            border: none;
+            color: #9ca3af;
+            font-size: 22px;
+            cursor: pointer;
+            padding: 4px;
+            transition: color 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .drawer-close:hover {
+            color: white;
+        }
+
+        .drawer-body {
+            flex: 1;
+            padding: 24px;
+            overflow-y: auto;
+        }
+
+        .drawer-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(4px);
+            z-index: 1050;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .drawer-overlay.open {
+            display: block;
+            opacity: 1;
+        }
+
+        /* === LIVE CAMERA STREAMS GRID & STATE === */
+        .live-stream-container {
+            position: relative;
+            cursor: pointer;
+            overflow: hidden;
+            border-radius: 12px;
+            border: 2px solid rgba(255,255,255,0.08);
+            transition: all 0.3s ease;
+        }
+
+        .live-stream-container.active-table {
+            border-color: rgba(34,197,94,0.45);
+            box-shadow: 0 0 15px rgba(34,197,94,0.15);
+        }
+
+        .live-stream-container.empty-table {
+            border-color: rgba(156,163,175,0.15);
+        }
+
+        .stream-status-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 6px;
+            z-index: 10;
+            letter-spacing: 0.5px;
+        }
+
+        .status-active-playing {
+            background: rgba(34,197,94,0.25);
+            color: #4ade80;
+            border: 1px solid rgba(34,197,94,0.35);
+        }
+
+        .status-empty-waiting {
+            background: rgba(156,163,175,0.15);
+            color: #d1d5db;
+            border: 1px solid rgba(156,163,175,0.25);
+        }
+
+        .stream-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15,23,42,0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 12px;
+            z-index: 5;
+            transition: all 0.3s ease;
+        }
+
+        .stream-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .stream-action-btn {
+            background: rgba(99,102,241,0.2);
+            border: 1px solid rgba(99,102,241,0.4);
+            color: #a5b4fc;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 700;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .stream-action-btn:hover {
+            background: rgba(99,102,241,0.35);
+            color: white;
+        }
+
+        /* Hover overlay on live stream */
+        .live-stream-container:hover .hover-action-overlay {
+            opacity: 1;
+        }
+
+        .hover-action-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            z-index: 4;
+        }
+
+        /* === RESPONSIVE === */
+        @media (max-width: 1024px) {
+            .dashboard-grid { grid-template-columns: 1fr; }
+            .sidebar { position: fixed; top: 75px; left: 0; height: calc(100vh - 75px); transform: translateX(-100%); }
+            .sidebar.collapsed { transform: translateX(0); width: 260px; opacity: 1; pointer-events: auto; padding: 30px 20px; }
+        }
+
+        @media (max-width: 768px) {
+            .header { padding: 12px 16px; flex-direction: column; gap: 12px; }
+            .main-content { padding: 16px; }
+            .stats-bar { flex-wrap: wrap; justify-content: center; }
+            .status-banner { margin: 12px 16px 0; }
+            .event-actions { flex-direction: column; }
+            .btn { justify-content: center; }
+            .drawer { width: 100%; }
+        }
+    
+        /* === CUSTOM SWEETALERT-LIKE MODAL (MATCHING IMAGE 2) === */
+        .custom-confirm-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(6px);
+            z-index: 10000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            padding: 16px;
+        }
+
+        .custom-confirm-card {
+            background: #ffffff;
+            color: #1f2937;
+            border-radius: 20px;
+            padding: 28px 24px;
+            max-width: 420px;
+            width: 100%;
+            text-align: center;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+            animation: modalPop 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+
+        .custom-modal-icon {
+            width: 76px;
+            height: 76px;
+            border-radius: 50%;
+            border: 4px solid #f97316;
+            color: #f97316;
+            font-size: 40px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px auto;
+            line-height: 1;
+        }
+
+        .custom-modal-icon.info {
+            border-color: #3b82f6;
+            color: #3b82f6;
+        }
+
+        .custom-modal-title {
+            font-size: 21px;
+            font-weight: 800;
+            color: #111827;
+            margin: 0 0 6px 0;
+        }
+
+        .custom-modal-sub {
+            font-size: 14px;
+            color: #4b5563;
+            margin: 0 0 18px 0;
+            line-height: 1.4;
+        }
+
+        .custom-modal-options {
+            text-align: left;
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 12px 16px;
+            margin-bottom: 20px;
+        }
+
+        .custom-modal-radio {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 0;
+            font-weight: 600;
+            font-size: 14px;
+            color: #374151;
+            cursor: pointer;
+        }
+
+        .custom-modal-radio input[type="radio"] {
+            width: 18px;
+            height: 18px;
+            accent-color: #10b981;
+            cursor: pointer;
+        }
+
+        .custom-modal-input {
+            width: 100%;
+            height: 38px;
+            background: #ffffff;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            padding: 0 12px;
+            font-size: 13px;
+            color: #1f2937;
+            margin-top: 8px;
+            outline: none;
+            box-sizing: border-box;
+        }
+
+        .custom-modal-input:focus {
+            border-color: #10b981;
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+        }
+
+        .custom-modal-select {
+            width: 100%;
+            height: 42px;
+            background: #ffffff;
+            border: 1.5px solid #d1d5db;
+            border-radius: 10px;
+            padding: 0 12px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #1f2937;
+            outline: none;
+            box-sizing: border-box;
+        }
+
+        .custom-modal-select:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+
+        .custom-modal-btns {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+        }
+
+        .btn-custom-confirm {
+            flex: 1;
+            max-width: 140px;
+            height: 44px;
+            background: #10b981;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .btn-custom-confirm:hover {
+            background: #059669;
+            transform: translateY(-1px);
+        }
+
+        .btn-custom-cancel {
+            flex: 1;
+            max-width: 140px;
+            height: 44px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .btn-custom-cancel:hover {
+            background: #dc2626;
+            transform: translateY(-1px);
+        }
+
+        /* Notification Bell & Drawer - Position 2 Top Right */
+        .notif-bell-btn {
+            position: relative;
+            background: linear-gradient(135deg, rgba(251, 191, 36, 0.25), rgba(245, 158, 11, 0.42));
+            border: 2px solid #fbbf24;
+            color: #fbbf24;
+            font-size: 32px;
+            width: 62px;
+            height: 62px;
+            border-radius: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 20px rgba(245, 158, 11, 0.4);
+            flex-shrink: 0;
+            margin-top: 8px;
+        }
+
+        .notif-bell-btn:hover {
+            background: linear-gradient(135deg, rgba(251, 191, 36, 0.45), rgba(245, 158, 11, 0.65));
+            transform: scale(1.08);
+            border-color: #ffffff;
+            box-shadow: 0 6px 25px rgba(251, 191, 36, 0.6);
+        }
+
+        .notif-bell-btn:active {
+            transform: scale(0.94);
+        }
+
+        .notif-count-badge {
+            position: absolute;
+            top: -7px;
+            right: -7px;
+            background: #ef4444;
+            color: white;
+            font-size: 13px;
+            font-weight: 900;
+            padding: 3px 9px;
+            border-radius: 12px;
+            border: 2px solid #0f0c29;
+            box-shadow: 0 0 12px rgba(239, 68, 68, 0.9);
+            line-height: 1;
+        }
+    </style>
+</head>
+<body>
+    <!-- HEADER -->
+    <div class="header">
+        <div class="header-left">
+            <button class="menu-toggle-btn" id="menu-btn" onclick="toggleSidebar()">☰</button>
+            <div class="logo-icon">8</div>
+            <div>
+                <div class="header-title">Bida Club</div>
+                <div class="header-sub">Đẳng cấp từng cú cơ</div>
+                <div style="font-size: 11px; color: #8b949e; margin-top: 4px;">📍 3xx Huỳnh Tấn Phát quận 7 HCM &nbsp;|&nbsp; 📞 0396123456</div>
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="stats-bar">
+                <div class="stat-chip">
+                    <span class="dot dot-green" id="status-dot"></span>
+                    <span id="status-label">Dang ket noi...</span>
+                </div>
+                <div class="stat-chip">
+                    <span id="event-count">0</span> su kien
+                </div>
+                <div id="clock">--:--:--</div>
+            </div>
+            <button class="sound-toggle" id="sound-btn" onclick="toggleSound()">
+                <span id="sound-icon">&#128264;</span> Am thanh
+            </button>
+        </div>
+    </div>
+
+    <!-- STATUS BANNER -->
+    <div class="status-banner status-connecting" id="status-banner">
+        <span id="banner-icon">&#9881;</span>
+        <span id="banner-text">Dang khoi tao ket noi toi AI Camera Server...</span>
+    </div>
+
+    <!-- APP CONTAINER -->
+    <div class="app-container">
+        <!-- LEFT SIDEBAR -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">🎱 QUẢN LÝ BÀN</div>
+                <a href="#" class="sidebar-link active" id="filter-all" onclick="setTableFilter('all', this)">📋 Tất cả bàn bida</a>
+                <a href="#" class="sidebar-link" id="filter-empty" onclick="setTableFilter('empty', this)">🟢 Danh sách bàn trống</a>
+                <a href="#" class="sidebar-link" id="filter-playing" onclick="setTableFilter('playing', this)">🔴 Bàn đang chơi</a>
+            </div>
+            
+            <div class="sidebar-section" style="border-top: 1px solid rgba(255,255,255,0.06); padding-top: 20px;">
+                <div class="sidebar-section-title">🎥 CÔNG CỤ CAMERA</div>
+                <a href="#" class="sidebar-link" onclick="toggleDrawer(true)">⏳ Trích xuất Highlight</a>
+            </div>
+            
+            <div class="sidebar-section" style="border-top: 1px solid rgba(255,255,255,0.06); padding-top: 20px;">
+                <div class="sidebar-section-title">📦 KHO HÀNG & THỰC ĐƠN</div>
+                <a href="#" class="sidebar-link" onclick="openInventoryModal()">📦 Quản lý Kho & Thực đơn</a>
+            </div>
+            
+            <div class="sidebar-section" style="border-top: 1px solid rgba(255,255,255,0.06); padding-top: 20px;">
+                <div class="sidebar-section-title">📊 BÁO CÁO & LỊCH SỬ</div>
+                <a href="#" class="sidebar-link" onclick="openReportModal()">📊 Xuất báo cáo Doanh thu</a>
+                <a href="#" class="sidebar-link" onclick="openHistoryModal()">🕰️ Lịch sử Bàn chơi</a>
+            </div>
+        </div>
+
+        <!-- MAIN CONTENT WRAPPER -->
+        <div class="main-content-wrapper">
+            <!-- MAIN -->
+            <div class="main-content">
+                <div class="dashboard-grid">
+                    <!-- LEFT COLUMN: TABLES & LIVE CAM FEED -->
+                    <div class="dashboard-col">
+                        <!-- BILLIARD TABLES SECTION (MỚI) -->
+                        <div class="card">
+                            <div class="card-header-title">🎱 Danh sách quản lý bàn bida</div>
+                            <div class="tables-grid" id="tables-grid">
+                                <!-- Danh sách bàn bida load động qua JS -->
+                            </div>
+                        </div>
+
+                        <!-- LIVE CAMERA FEED GRID 2x2 -->
+                        <div class="card">
+                            <div class="card-header-title">🎥 Live Camera Streams - Hệ thống giám sát bàn chơi</div>
+                            <div class="cameras-grid">
+                                <div class="live-stream-container" id="cam-container-1" onclick="toggleCamStream(1)">
+                                    <div class="live-tag" style="font-size: 10px; padding: 2px 6px;">Bàn 1</div>
+                                    <div class="stream-status-badge status-empty-waiting" id="cam-status-1">BÀN TRỐNG</div>
+                                    <img id="live-cam-1" class="live-stream-img" src="" onerror="this.src='https://images.unsplash.com/photo-1544197150-b99a580bb7a8?q=80&w=600&auto=format&fit=crop'" alt="Bàn 1 Cam">
+                                    <div class="stream-overlay" id="cam-overlay-1">
+                                        <button class="stream-action-btn">▶ Xem Stream</button>
+                                    </div>
+                                    <div class="hover-action-overlay" id="cam-hover-1">
+                                        <button class="stream-action-btn" style="background: rgba(239,68,68,0.25); border-color: rgba(239,68,68,0.4); color: #fca5a5;">⏸ Tắt Stream</button>
+                                    </div>
+                                </div>
+                                <div class="live-stream-container" id="cam-container-2" onclick="toggleCamStream(2)">
+                                    <div class="live-tag" style="font-size: 10px; padding: 2px 6px; background: #6366f1;">Bàn 2</div>
+                                    <div class="stream-status-badge status-empty-waiting" id="cam-status-2">BÀN TRỐNG</div>
+                                    <img id="live-cam-2" class="live-stream-img" src="" onerror="this.src='https://images.unsplash.com/photo-1544197150-b99a580bb7a8?q=80&w=600&auto=format&fit=crop'" alt="Bàn 2 Cam">
+                                    <div class="stream-overlay" id="cam-overlay-2">
+                                        <button class="stream-action-btn">▶ Xem Stream</button>
+                                    </div>
+                                    <div class="hover-action-overlay" id="cam-hover-2">
+                                        <button class="stream-action-btn" style="background: rgba(239,68,68,0.25); border-color: rgba(239,68,68,0.4); color: #fca5a5;">⏸ Tắt Stream</button>
+                                    </div>
+                                </div>
+                                <div class="live-stream-container" id="cam-container-3" onclick="toggleCamStream(3)">
+                                    <div class="live-tag" style="font-size: 10px; padding: 2px 6px; background: #8b5cf6;">Bàn 3</div>
+                                    <div class="stream-status-badge status-empty-waiting" id="cam-status-3">BÀN TRỐNG</div>
+                                    <img id="live-cam-3" class="live-stream-img" src="" onerror="this.src='https://images.unsplash.com/photo-1544197150-b99a580bb7a8?q=80&w=600&auto=format&fit=crop'" alt="Bàn 3 Cam">
+                                    <div class="stream-overlay" id="cam-overlay-3">
+                                        <button class="stream-action-btn">▶ Xem Stream</button>
+                                    </div>
+                                    <div class="hover-action-overlay" id="cam-hover-3">
+                                        <button class="stream-action-btn" style="background: rgba(239,68,68,0.25); border-color: rgba(239,68,68,0.4); color: #fca5a5;">⏸ Tắt Stream</button>
+                                    </div>
+                                </div>
+                                <div class="live-stream-container" id="cam-container-4" onclick="toggleCamStream(4)">
+                                    <div class="live-tag" style="font-size: 10px; padding: 2px 6px; background: #ec4899;">Bàn 4</div>
+                                    <div class="stream-status-badge status-empty-waiting" id="cam-status-4">BÀN TRỐNG</div>
+                                    <img id="live-cam-4" class="live-stream-img" src="" onerror="this.src='https://images.unsplash.com/photo-1544197150-b99a580bb7a8?q=80&w=600&auto=format&fit=crop'" alt="Bàn 4 Cam">
+                                    <div class="stream-overlay" id="cam-overlay-4">
+                                        <button class="stream-action-btn">▶ Xem Stream</button>
+                                    </div>
+                                    <div class="hover-action-overlay" id="cam-hover-4">
+                                        <button class="stream-action-btn" style="background: rgba(239,68,68,0.25); border-color: rgba(239,68,68,0.4); color: #fca5a5;">⏸ Tắt Stream</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- RIGHT COLUMN: REALTIME ALERTS LOG -->
+                    <div class="dashboard-col">
+                        <div class="section-label">Canh bao realtime</div>
+                        <div id="events">
+                            <div class="empty-state" id="empty-state">
+                                <div class="empty-icon">&#128247;</div>
+                                <div class="empty-text">Chua co su kien nao</div>
+                                <div class="empty-sub">He thong dang cho AI Camera gui du lieu...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RIGHT HIGHLIGHT DRAWER -->
+    <div class="drawer-overlay" id="drawer-overlay" onclick="toggleDrawer(false)"></div>
+    <div class="drawer" id="highlight-drawer">
+        <div class="drawer-header">
+            <h3>🎬 Highlight Clip Center</h3>
+            <button class="drawer-close" onclick="toggleDrawer(false)">✕</button>
+        </div>
+        <div class="drawer-body">
+            <div class="highlight-desc" style="font-size: 13px; color: #9ca3af; line-height: 1.5; margin-bottom: 20px;">
+                Chọn bàn bida bên dưới, sau đó bấm cắt nhanh 30 giây vừa qua.
+                Hoặc trích xuất video trong quá khứ qua Cỗ Máy Thời Gian (lưu tối đa 30 phút).
+            </div>
+            
+            <div style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 20px;">
+                <span style="font-size: 13px; font-weight: 600; color: #a5b4fc;">Chọn bàn cần trích xuất:</span>
+                <select id="highlight-table-select" style="background:#1f1b4b; border:1px solid rgba(255,255,255,0.15); border-radius:8px; color:white; padding:8px 12px; font-size:13px; font-weight:700; outline:none; cursor: pointer; width: 100%;">
+                    <option value="1">Bàn 1</option>
+                    <option value="2">Bàn 2</option>
+                    <option value="3">Bàn 3</option>
+                    <option value="4">Bàn 4</option>
+                </select>
+            </div>
+            
+            <button class="btn btn-highlight" id="clip-btn" onclick="requestSelectedClip()" style="width: 100%; justify-content: center; margin-bottom: 20px;">🎥 Highlight 30s bàn đã chọn</button>
+
+            <!-- TIME MACHINE -->
+            <div class="time-machine-container">
+                <div class="time-machine-title">⏳ Co May Thoi Gian</div>
+                <div class="time-machine-row" style="margin-top: 10px;">
+                    <input type="time" id="time-input" class="time-input">
+                    <button class="btn btn-download" style="padding: 10px 18px;" id="past-clip-btn" onclick="requestSelectedPastClip()">⌛ Trích xuất</button>
+                </div>
+            </div>
+
+            <div class="highlight-status" id="clip-status" style="margin-top: 20px; display: none;"></div>
+            <div class="clips-list" id="clips-list" style="margin-top: 20px;"></div>
+        </div>
+    </div>
+
+    <!-- REPORT MODAL -->
+    <div class="bill-modal-overlay" id="report-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 1000; align-items: center; justify-content: center;">
+        <div class="card" style="width: 90%; max-width: 500px; background: #1e1b4b; border: 1px solid rgba(255,255,255,0.15); display: flex; flex-direction: column; gap: 16px; padding: 24px;">
+            <div style="font-size: 18px; font-weight: 800; color: #fbbf24; border-bottom: 2px dashed rgba(255,255,255,0.15); padding-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span>📊 XUẤT BÁO CÁO DOANH THU</span>
+                </div>
+                <span style="cursor: pointer; color: #9ca3af; font-size: 20px; font-weight: bold; padding: 4px;" onclick="closeReportModal()">✕</span>
+            </div>
+            
+            <div style="display: flex; flex-direction: column; gap: 12px; color: white;">
+                <div>
+                    <label style="font-size: 13px; font-weight: 600; color: #a5b4fc; display: block; margin-bottom: 4px;">Từ ngày:</label>
+                    <input type="date" id="report-start-date" style="width: 100%; height: 40px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white; padding: 0 12px; font-size: 14px; outline: none; color-scheme: dark;">
+                </div>
+                <div>
+                    <label style="font-size: 13px; font-weight: 600; color: #a5b4fc; display: block; margin-bottom: 4px;">Đến ngày:</label>
+                    <input type="date" id="report-end-date" style="width: 100%; height: 40px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white; padding: 0 12px; font-size: 14px; outline: none; color-scheme: dark;">
+                </div>
+            </div>
+            
+            <button onclick="downloadRevenueReport()" style="margin-top: 8px; height: 44px; border-radius: 8px; border: none; background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; font-weight: bold; font-size: 15px; cursor: pointer; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">📥 Tải file Excel (.csv)</button>
+        </div>
+    </div>
+
+    <!-- HISTORY MODAL -->
+    <div class="bill-modal-overlay" id="history-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 1000; align-items: center; justify-content: center;">
+        <div class="card" style="width: 95%; max-width: 800px; background: #1e1b4b; border: 1px solid rgba(255,255,255,0.15); display: flex; flex-direction: column; gap: 16px; padding: 24px; max-height: 90vh; overflow-y: auto;">
+            <div style="font-size: 18px; font-weight: 800; color: #fbbf24; border-bottom: 2px dashed rgba(255,255,255,0.15); padding-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span>🕰️ LỊCH SỬ BÀN CHƠI</span>
+                </div>
+                <span style="cursor: pointer; color: #9ca3af; font-size: 20px; font-weight: bold; padding: 4px;" onclick="closeHistoryModal()">✕</span>
+            </div>
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #d1d5db; margin-bottom: 8px;">
+                <span>* Chỉ có thể xóa các phiên chơi có thời gian kết thúc quá 48 giờ.</span>
+                <button onclick="deleteSelectedHistory()" id="btn-delete-history" style="padding: 8px 16px; border-radius: 8px; border: none; background: #ef4444; color: white; font-weight: bold; cursor: pointer; transition: background 0.2s; opacity: 0.5;" disabled>🗑️ Xóa đã chọn</button>
+            </div>
+
+            <div style="max-height: 400px; overflow-y: auto; background: rgba(0,0,0,0.25); border-radius: 12px; border: 1px solid rgba(255,255,255,0.06);">
+                <table style="width: 100%; border-collapse: collapse; font-size: 12px; text-align: left;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.15); color: #a5b4fc; font-weight: 700;">
+                            <th style="padding: 10px 8px; width: 40px; text-align: center;">
+                                <input type="checkbox" id="chk-all-history" onclick="toggleAllHistory(this)" style="cursor: pointer;">
+                            </th>
+                            <th style="padding: 10px 8px;">BÀN</th>
+                            <th style="padding: 10px 8px;">GIỜ VÀO</th>
+                            <th style="padding: 10px 8px;">GIỜ RA</th>
+                            <th style="padding: 10px 8px; text-align: right;">THỜI GIAN</th>
+                            <th style="padding: 10px 8px; text-align: right;">TỔNG TIỀN</th>
+                            <th style="padding: 10px 8px; text-align: center; width: 80px;">CHI TIẾT</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-items-body">
+                        <!-- History data loaded via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- INVENTORY MANAGEMENT MODAL -->
+    <div class="bill-modal-overlay" id="inventory-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 1000; align-items: center; justify-content: center;">
+        <div class="card" style="width: 95%; max-width: 720px; background: #1e1b4b; border: 1px solid rgba(255,255,255,0.15); display: flex; flex-direction: column; gap: 16px; padding: 24px; max-height: 90vh; overflow-y: auto;">
+            <div style="font-size: 18px; font-weight: 800; color: #fbbf24; border-bottom: 2px dashed rgba(255,255,255,0.15); padding-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span>📦 QUẢN LÝ KHO HÀNG & THỰC ĐƠN</span>
+                </div>
+                <span style="cursor: pointer; color: #9ca3af; font-size: 20px; font-weight: bold; padding: 4px;" onclick="closeInventoryModal()">✕</span>
+            </div>
+
+            <!-- Tabs Header -->
+            <div style="display: flex; gap: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px;">
+                <button id="tab-btn-products" onclick="switchInventoryTab('products')" style="padding: 8px 16px; border-radius: 8px; border: none; background: #6366f1; color: white; font-weight: bold; cursor: pointer;">🍔 Quản lý Thực đơn</button>
+                <button id="tab-btn-tables" onclick="switchInventoryTab('tables')" style="padding: 8px 16px; border-radius: 8px; border: none; background: transparent; color: #9ca3af; font-weight: bold; cursor: pointer;">🎱 Quản lý Bàn Bida</button>
+            </div>
+
+            <!-- TAB: PRODUCTS -->
+            <div id="tab-content-products">
+                <!-- Form thêm sản phẩm mới -->
+                <div style="background: rgba(255,255,255,0.04); padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; gap: 10px;">
+                    <div style="font-weight: 700; color: #a5b4fc; font-size: 14px;">➕ Thêm sản phẩm mới</div>
+                    <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 8px;">
+                        <input type="text" id="new-prod-name" placeholder="Tên sản phẩm (Sting dâu...)" style="height: 38px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white; padding: 0 10px; font-size: 13px; outline: none;">
+                        
+                        <input list="cat-list" type="text" id="new-prod-category" placeholder="Danh mục..." style="height: 38px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white; padding: 0 10px; font-size: 13px; outline: none;">
+                        <datalist id="cat-list">
+                            <option value="Thức uống">
+                            <option value="Đồ ăn">
+                            <option value="Thuốc lá">
+                            <option value="Dịch vụ khác">
+                        </datalist>
+
+                        <input type="number" id="new-prod-price" placeholder="Đơn giá (VNĐ)" style="height: 38px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white; padding: 0 10px; font-size: 13px; outline: none;">
+                        <input type="number" id="new-prod-stock" placeholder="Tồn ban đầu" style="height: 38px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white; padding: 0 10px; font-size: 13px; outline: none;">
+                    </div>
+                    <input type="text" id="new-prod-image" placeholder="Link hình ảnh (Ví dụ: https://... hoặc để trống)" style="height: 38px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white; padding: 0 10px; font-size: 13px; outline: none; margin-bottom: 4px;">
+                    <button onclick="addNewProduct()" style="height: 36px; border-radius: 6px; border: none; background: linear-gradient(135deg, #10b981, #059669); color: white; font-weight: bold; cursor: pointer; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Thêm sản phẩm</button>
+                </div>
+
+                <!-- Danh sách sản phẩm hiện tại -->
+                <div style="font-size: 13px; color: #d1d5db; margin-top: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <div style="font-weight: 700; color: #fbbf24; font-size: 14px;">Danh sách thực phẩm trong kho:</div>
+                        <div style="display: flex; gap: 8px;">
+                            <button onclick="saveAllProducts()" style="background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">💾 Lưu tất cả</button>
+                            <button onclick="deleteSelectedProducts()" style="background: linear-gradient(135deg, #ef4444, #dc2626); color: white; border: none; padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">🗑️ Xóa đã chọn</button>
+                        </div>
+                    </div>
+
+                    <div style="max-height: 280px; overflow-y: auto; background: rgba(0,0,0,0.25); border-radius: 12px; border: 1px solid rgba(255,255,255,0.06);">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 12px; text-align: left;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.15); color: #a5b4fc; font-weight: 700;">
+                                    <th style="padding: 10px 8px; text-align: center; width: 34px;"><input type="checkbox" id="chk-all-prods" onchange="toggleSelectAllProds(this)" title="Chọn tất cả"></th>
+                                    <th style="padding: 10px 8px;">TÊN SẢN PHẨM</th>
+                                    <th style="padding: 10px 8px;">DANH MỤC</th>
+                                    <th style="padding: 10px 8px;">HÌNH ẢNH</th>
+                                    <th style="padding: 10px 8px; text-align: right;">ĐƠN GIÁ (VNĐ)</th>
+                                    <th style="padding: 10px 8px; text-align: center;">TỒN KHO</th>
+                                    <th style="padding: 10px 8px; text-align: center;">HÀNH ĐỘNG</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inventory-items-body">
+                                <!-- Items listed here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: TABLES -->
+            <div id="tab-content-tables" style="display: none;">
+                <!-- Form thêm bàn mới -->
+                <div style="background: rgba(255,255,255,0.04); padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; gap: 10px;">
+                    <div style="font-weight: 700; color: #a5b4fc; font-size: 14px;">➕ Thêm Bàn Bida Mới</div>
+                    <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 8px;">
+                        <input type="text" id="new-table-name" placeholder="Tên bàn (VD: Bàn 5 Bida Lỗ)" style="height: 38px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white; padding: 0 10px; font-size: 13px; outline: none;">
+                        
+                        <select id="new-table-type" style="height: 38px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white; padding: 0 10px; font-size: 13px; outline: none;">
+                            <option value="LIP">Bida Líp</option>
+                            <option value="3C">Bida 3 Băng</option>
+                            <option value="POOL">Bida Lỗ</option>
+                        </select>
+
+                        <select id="new-table-tier" style="height: 38px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white; padding: 0 10px; font-size: 13px; outline: none;">
+                            <option value="STANDARD">Bàn Thường</option>
+                            <option value="VIP">Bàn VIP</option>
+                        </select>
+
+                        <input type="number" id="new-table-price" placeholder="Giá/giờ (VNĐ)" style="height: 38px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white; padding: 0 10px; font-size: 13px; outline: none;">
+                    </div>
+                    <input type="text" id="new-table-cam" placeholder="Camera ID (0, 1, 2...) hoặc RTSP URL" style="height: 38px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white; padding: 0 10px; font-size: 13px; outline: none; margin-bottom: 4px;">
+                    <button onclick="addNewAdminTable()" style="height: 36px; border-radius: 6px; border: none; background: linear-gradient(135deg, #10b981, #059669); color: white; font-weight: bold; cursor: pointer; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">Thêm Bàn</button>
+                </div>
+
+                <!-- Danh sách bàn hiện tại -->
+                <div style="font-size: 13px; color: #d1d5db; margin-top: 16px;">
+                    <div style="font-weight: 700; color: #fbbf24; margin-bottom: 8px;">Danh sách Bàn Bida trong quán:</div>
+                    <div style="max-height: 280px; overflow-y: auto; background: rgba(0,0,0,0.25); border-radius: 12px; border: 1px solid rgba(255,255,255,0.06);">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 12px; text-align: left;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.15); color: #a5b4fc; font-weight: 700;">
+                                    <th style="padding: 10px 8px;">TÊN BÀN</th>
+                                    <th style="padding: 10px 8px;">LOẠI BÀN</th>
+                                    <th style="padding: 10px 8px;">TIÊU CHUẨN</th>
+                                    <th style="padding: 10px 8px;">CAMERA</th>
+                                    <th style="padding: 10px 8px; text-align: right;">GIÁ/GIỜ (VNĐ)</th>
+                                    <th style="padding: 10px 8px; text-align: center;">HÀNH ĐỘNG</th>
+                                </tr>
+                            </thead>
+                            <tbody id="inventory-tables-body">
+                                <!-- Tables listed here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
+                <button onclick="closeInventoryModal()" style="padding: 10px 24px; border-radius: 8px; border: none; background: #4b5563; color: white; font-weight: bold; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='#374151'" onmouseout="this.style.background='#4b5563'">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- BILL INVOICE MODAL -->
+    <div class="bill-modal-overlay" id="bill-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 1000; align-items: center; justify-content: center;">
+        <div class="card" style="width: 90%; max-width: 480px; background: #1e1b4b; border: 1px solid rgba(255,255,255,0.15); display: flex; flex-direction: column; gap: 16px; padding: 28px;">
+            <div style="font-size: 18px; font-weight: 800; color: #fbbf24; border-bottom: 2px dashed rgba(255,255,255,0.15); padding-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span>🧾 HÓA ĐƠN THANH TOÁN</span>
+                    <span id="bill-table-name" style="font-size: 13px; background: rgba(99,102,241,0.3); color: #a5b4fc; padding: 3px 10px; border-radius: 6px; font-weight:700;">Bàn 1</span>
+                </div>
+                <span style="cursor: pointer; color: #9ca3af; font-size: 20px; font-weight: bold; padding: 4px; transition: color 0.2s;" onclick="closeBillModal()" onmouseover="this.style.color='white'" onmouseout="this.style.color='#9ca3af'">✕</span>
+            </div>
+            
+            <div style="font-size: 13px; color: #d1d5db; display: flex; flex-direction: column; gap: 6px;">
+                <div style="display: flex; justify-content: space-between;"><span>Giờ vào:</span> <b id="bill-start-time">--:--</b></div>
+                <div id="bill-end-time-row" style="display: flex; justify-content: space-between;"><span>Giờ ra:</span> <b id="bill-end-time">--:--</b></div>
+                <div style="display: flex; justify-content: space-between;"><span>Tổng thời gian chơi:</span> <b id="bill-duration">0 phút</b></div>
+                <div style="display: flex; justify-content: space-between; color: #86efac; border-bottom: 1px solid rgba(255,255,255,0.06); padding-bottom: 8px;">
+                    <span>Tiền giờ chơi:</span> <b id="bill-play-fee" style="font-variant-numeric: tabular-nums;">0 VNĐ</b>
+                </div>
+            </div>
+            
+            <div style="font-size: 13px; color: #d1d5db;">
+                <div style="font-weight: 700; color: #a5b4fc; margin-bottom: 8px;">Chi tiết món gọi (nước ngọt, khô mực...):</div>
+                <div style="max-height: 140px; overflow-y: auto; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.04);">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 12px; text-align: left;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.15); color: #fbbf24; font-weight: 700;">
+                                <th style="padding: 4px 0; font-size: 11px;">TÊN MÓN</th>
                                 <th style="padding: 4px 8px; text-align: center; font-size: 11px;">SL</th>
                                 <th style="padding: 4px 8px; text-align: right; font-size: 11px;">ĐƠN GIÁ</th>
                                 <th style="padding: 4px 0; text-align: right; font-size: 11px;">TỔNG TIỀN</th>
@@ -83,7 +1661,66 @@
         </div>
     </div>
 
+    <!-- REJECT TRANSFER CUSTOM MODAL (IMAGE 2 DESIGN) -->
+    <div class="custom-confirm-overlay" id="reject-transfer-modal">
+        <div class="custom-confirm-card">
+            <div class="custom-modal-icon">!</div>
+            <div class="custom-modal-title">Từ chối yêu cầu đổi bàn?</div>
+            <div class="custom-modal-sub" id="reject-modal-sub">Vui lòng chọn lý do từ chối yêu cầu đổi bàn của khách</div>
+            
+            <div class="custom-modal-options">
+                <label class="custom-modal-radio">
+                    <input type="radio" name="reject_reason" value="1" checked onchange="toggleRejectOtherInput()">
+                    <span>1 - Tạm thời hết bàn trống</span>
+                </label>
+                <label class="custom-modal-radio">
+                    <input type="radio" name="reject_reason" value="2" onchange="toggleRejectOtherInput()">
+                    <span>2 - Bàn đang bảo trì / hỏng</span>
+                </label>
+                <label class="custom-modal-radio">
+                    <input type="radio" name="reject_reason" value="3" onchange="toggleRejectOtherInput()">
+                    <span>3 - Lý do khác...</span>
+                </label>
+                <input type="text" id="reject-other-input" class="custom-modal-input" placeholder="Nhập lý do cụ thể..." style="display: none;">
+            </div>
+
+            <div class="custom-modal-btns">
+                <button class="btn-custom-confirm" onclick="confirmRejectTransfer()">Đồng ý</button>
+                <button class="btn-custom-cancel" onclick="closeRejectTransferModal()">Hủy</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- APPROVE TRANSFER CUSTOM MODAL -->
+    <div class="custom-confirm-overlay" id="approve-transfer-modal">
+        <div class="custom-confirm-card">
+            <div class="custom-modal-icon info">🔄</div>
+            <div class="custom-modal-title">Chuyển sang bàn nào?</div>
+            <div class="custom-modal-sub" id="approve-modal-sub">Chọn bàn đích để chuyển phiên chơi cho khách</div>
+            
+            <div style="margin-bottom: 20px; text-align: left;">
+                <label style="font-size: 13px; color: #4b5563; font-weight: 700; display: block; margin-bottom: 6px;">Danh sách bàn trống khả dụng:</label>
+                <select id="transfer-target-select" class="custom-modal-select"></select>
+            </div>
+
+            <div class="custom-modal-btns">
+                <button class="btn-custom-confirm" onclick="confirmTransferTable()">Đồng ý</button>
+                <button class="btn-custom-cancel" onclick="closeTransferModal()">Hủy</button>
+            </div>
+        </div>
+    </div>
+
     <script>
+        window.onerror = function(msg, url, lineNo, columnNo, error) {
+            var bannerText = document.getElementById("banner-text");
+            var statusBanner = document.getElementById("status-banner");
+            if(bannerText) {
+                statusBanner.className = "status-banner status-error";
+                bannerText.textContent = "Lỗi JS: " + msg + " (Dòng " + lineNo + ")";
+            }
+            return false;
+        };
+        
         var eventsDiv = document.getElementById("events");
         var emptyState = document.getElementById("empty-state");
         var statusDot = document.getElementById("status-dot");
@@ -222,16 +1859,29 @@
 
         // === LIVE CAM REFRESH ===
         // Chỉ refresh ảnh của các camera đang ở trạng thái Bật Stream (streamStates[id] = true)
-        setInterval(function() {
-            for (var id = 1; id <= 4; id++) {
-                if (streamStates[id]) {
-                    var liveImg = document.getElementById("live-cam-" + id);
-                    if (liveImg) {
-                        liveImg.src = "/api/live/" + id + "?t=" + Date.now();
-                    }
-                }
+        function refreshCam(id) {
+            if (!streamStates[id]) {
+                setTimeout(function() { refreshCam(id); }, 1500);
+                return;
             }
-        }, 1500);
+            var liveImg = document.getElementById("live-cam-" + id);
+            if (!liveImg) {
+                setTimeout(function() { refreshCam(id); }, 1500);
+                return;
+            }
+            var newImg = new Image();
+            newImg.onload = function() {
+                liveImg.src = newImg.src;
+                setTimeout(function() { refreshCam(id); }, 1500);
+            };
+            newImg.onerror = function() {
+                setTimeout(function() { refreshCam(id); }, 1500);
+            };
+            newImg.src = "/api/live/" + id + "?t=" + Date.now();
+        }
+        for (var camId = 1; camId <= 4; camId++) {
+            refreshCam(camId);
+        }
 
         // === SOUND ===
         function toggleSound() {
@@ -414,6 +2064,10 @@
                     renderTablesGrid(tables);
                     syncStreamStates(tables); // Cập nhật trạng thái bật/tắt camera
                 }
+                setTimeout(loadTables, 3000);
+            };
+            xhr.onerror = function() {
+                setTimeout(loadTables, 3000);
             };
             xhr.send();
         }
@@ -537,14 +2191,6 @@
                 btnGroup.className = "order-btn-group";
                 
                 if (t.current_status === "PLAYING") {
-                    // Nut Them mon
-                    var btnAdd = document.createElement("button");
-                    btnAdd.className = "btn btn-highlight btn-small";
-                    btnAdd.innerHTML = "➕ Thêm món";
-                    btnAdd.addEventListener("click", function() {
-                        showAddItemForm(t.id);
-                    });
-                    btnGroup.appendChild(btnAdd);
                     
                     // Nut Thanh toan
                     var btnStop = document.createElement("button");
@@ -653,7 +2299,84 @@
 
 
         // === TRANSFER TABLE ===
+        var currentTransferFromId = null;
+        var currentRejectTableId = null;
+
+        function toggleRejectOtherInput() {
+            var radios = document.getElementsByName("reject_reason");
+            var selectedVal = "1";
+            for (var i = 0; i < radios.length; i++) {
+                if (radios[i].checked) selectedVal = radios[i].value;
+            }
+            var otherInput = document.getElementById("reject-other-input");
+            if (selectedVal === "3") {
+                otherInput.style.display = "block";
+                otherInput.focus();
+            } else {
+                otherInput.style.display = "none";
+            }
+        }
+
+        function showRejectTransferModal(tableId) {
+            currentRejectTableId = tableId;
+            var fromTable = tablesLocalData.find(function(t) { return t.id === tableId; });
+            var tableName = fromTable ? fromTable.name : ("Bàn " + tableId);
+            
+            var subEl = document.getElementById("reject-modal-sub");
+            if (subEl) subEl.textContent = "Từ chối yêu cầu đổi bàn của " + tableName;
+            var radios = document.getElementsByName("reject_reason");
+            if (radios && radios.length > 0) radios[0].checked = true;
+            var otherInput = document.getElementById("reject-other-input");
+            if (otherInput) { otherInput.style.display = "none"; otherInput.value = ""; }
+            var modalEl = document.getElementById("reject-transfer-modal");
+            if (modalEl) modalEl.style.display = "flex";
+        }
+
+        function closeRejectTransferModal() {
+            document.getElementById("reject-transfer-modal").style.display = "none";
+            currentRejectTableId = null;
+        }
+
+        function confirmRejectTransfer() {
+            if (!currentRejectTableId) return;
+            var tableId = currentRejectTableId;
+            
+            var radios = document.getElementsByName("reject_reason");
+            var selectedVal = "1";
+            for (var i = 0; i < radios.length; i++) {
+                if (radios[i].checked) selectedVal = radios[i].value;
+            }
+            
+            var reason = "";
+            if (selectedVal === "1") reason = "Hết bàn trống, mong quý khách thông cảm!";
+            else if (selectedVal === "2") reason = "Bàn yêu cầu đang bảo trì, mong quý khách thông cảm!";
+            else if (selectedVal === "3") {
+                reason = document.getElementById("reject-other-input").value.trim();
+                if (!reason) {
+                    alert("Vui lòng nhập lý do từ chối cụ thể!");
+                    return;
+                }
+            }
+            
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", "/api/client-notify/" + tableId, true);
+            xhr.setRequestHeader("Content-Type", "application/json");
+            xhr.onload = function() {
+                alert("Đã gửi thông báo từ chối tới khách!");
+                closeRejectTransferModal();
+                loadTables();
+            };
+            xhr.send(JSON.stringify({
+                message: "Yêu cầu đổi bàn đã bị từ chối. Lý do: " + reason,
+                type: "error"
+            }));
+        }
+
         function showTransferModal(fromTableId, requestedType) {
+            currentTransferFromId = fromTableId;
+            var fromTable = tablesLocalData.find(function(t) { return t.id === fromTableId; });
+            var fromName = fromTable ? fromTable.name : ("Bàn " + fromTableId);
+            
             var emptyTables = tablesLocalData.filter(function(t) { return t.current_status === "EMPTY"; });
             
             var typeName = "";
@@ -682,52 +2405,37 @@
                 }
             }
             
-            var nl = String.fromCharCode(10);
-            var options = emptyTables.map(function(t) { return t.id + " - " + t.name + " (" + t.table_type + ")"; }).join(nl);
+            var subEl = document.getElementById("approve-modal-sub");
+            if (subEl) subEl.textContent = "Chuyển " + fromName + (typeName ? (" (Yêu cầu: bàn " + typeName + ")") : "") + " sang bàn trống:";
             
-            var promptMsg = "Chuyển bàn gốc ID: " + fromTableId + nl;
-            if (typeName) promptMsg += "Yêu cầu: Đổi sang bàn " + typeName + nl;
-            promptMsg += "Danh sách bàn trống:" + nl + options + nl + nl + "Nhập ID bàn đích (ví dụ: " + emptyTables[0].id + "):";
+            var select = document.getElementById("transfer-target-select");
+            select.innerHTML = "";
+            emptyTables.forEach(function(t) {
+                var opt = document.createElement("option");
+                opt.value = t.id;
+                var tTypeName = t.table_type === "LIP" ? "Líp" : (t.table_type === "3C" ? "3 Băng" : "Lỗ");
+                opt.textContent = t.name + " (" + tTypeName + ")";
+                select.appendChild(opt);
+            });
             
-            var targetId = prompt(promptMsg);
-            
-            if (targetId) {
-                var toTableId = parseInt(targetId);
-                var toTable = emptyTables.find(function(t) { return t.id === toTableId; });
-                if (!toTable) {
-                    alert("ID bàn đích không hợp lệ hoặc bàn đang không trống!");
-                    return;
-                }
-                transferTable(fromTableId, toTableId);
-            }
+            document.getElementById("approve-transfer-modal").style.display = "flex";
         }
 
-        function showRejectTransferModal(tableId) {
-            var nl = String.fromCharCode(10);
-            var reasonCode = prompt("Từ chối yêu cầu đổi bàn (Bàn " + tableId + ")" + nl +
-                                    "Chọn lý do:" + nl +
-                                    "1 - Hết bàn" + nl +
-                                    "2 - Bàn hỏng" + nl +
-                                    "3 - Khác (nhập lý do cụ thể)" + nl +
-                                    "Nhập 1, 2 hoặc 3:");
-            if (!reasonCode) return;
-            
-            var reason = reasonCode;
-            if (reasonCode === "1") reason = "Hết bàn, mong quý khách thông cảm!";
-            else if (reasonCode === "2") reason = "Bàn đang hỏng, mong quý khách thông cảm!";
-            else if (reasonCode === "3") {
-                reason = prompt("Nhập lý do từ chối:");
-                if (!reason) return;
+        function closeTransferModal() {
+            document.getElementById("approve-transfer-modal").style.display = "none";
+            currentTransferFromId = null;
+        }
+
+        function confirmTransferTable() {
+            if (!currentTransferFromId) return;
+            var select = document.getElementById("transfer-target-select");
+            var toTableId = parseInt(select.value);
+            if (!toTableId) {
+                alert("Vui lòng chọn bàn đích!");
+                return;
             }
-            
-            var xhr = new XMLHttpRequest();
-            xhr.open("POST", "/api/client-notify/" + tableId, true);
-            xhr.setRequestHeader("Content-Type", "application/json");
-            xhr.send(JSON.stringify({
-                message: "Yêu cầu đổi bàn đã bị từ chối. Lý do: " + reason,
-                type: "error"
-            }));
-            alert("Đã gửi thông báo từ chối tới khách!");
+            transferTable(currentTransferFromId, toTableId);
+            closeTransferModal();
         }
         
         function transferTable(fromTableId, toTableId) {
@@ -969,10 +2677,8 @@
                 "<p>----------------------</p>" +
                 "<p>Thu ngân: Admin</p>" +
                 "<p>In lúc: " + printTime + "</p>" +
-                "<p style='font-style: italic; margin-top: 8px; font-weight: bold;'>Cảm ơn quý khách!</p>" +
                 "</div>" +
-                "</div>" +
-                "</body></html>";
+                "</div></body></html>";
 
             var iframe = document.getElementById("print-iframe");
             if (!iframe) {
@@ -1039,17 +2745,28 @@
             document.getElementById("inventory-modal").style.display = "none";
         }
 
+        function toggleSelectAllProds(master) {
+            var chks = document.querySelectorAll(".chk-prod");
+            chks.forEach(function(c) {
+                c.checked = master.checked;
+            });
+        }
+
         function loadInventoryList() {
             var xhr = new XMLHttpRequest();
             xhr.open("GET", "/api/products", true);
             xhr.onload = function() {
                 if (xhr.status === 200) {
                     var prods = JSON.parse(xhr.responseText);
+                    window.currentProdsList = prods;
                     var tbody = document.getElementById("inventory-items-body");
                     tbody.innerHTML = "";
                     
+                    var master = document.getElementById("chk-all-prods");
+                    if (master) master.checked = false;
+                    
                     if (prods.length === 0) {
-                        tbody.innerHTML = "<tr><td colspan='5' style='color:#6b7280; padding:12px; text-align:center;'>Chưa có sản phẩm nào</td></tr>";
+                        tbody.innerHTML = "<tr><td colspan='7' style='color:#6b7280; padding:12px; text-align:center;'>Chưa có sản phẩm nào</td></tr>";
                         return;
                     }
                     
@@ -1057,8 +2774,9 @@
                         var tr = document.createElement("tr");
                         tr.style.borderBottom = "1px solid rgba(255,255,255,0.04)";
                         tr.innerHTML = 
+                            "<td style='padding: 10px 8px; text-align:center;'><input type='checkbox' class='chk-prod' value='" + p.id + "'></td>" +
                             "<td style='padding: 10px 8px; font-weight:600; color:white;'>" + p.name + "</td>" +
-                            "<td style='padding: 10px 8px; color:#a5b4fc;'>" + p.category + "</td>" +
+                            "<td style='padding: 10px 8px;'><input list='cat-list' type='text' id='prod-cat-" + p.id + "' value='" + (p.category || '') + "' placeholder='Danh mục...' style='width:100px; height:28px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:4px; color:#a5b4fc; padding:0 4px; font-size:11px; outline:none;'></td>" +
                             "<td style='padding: 10px 8px;'><input type='text' id='prod-img-" + p.id + "' value='" + (p.image_url || '') + "' placeholder='Link ảnh...' style='width:90px; height:28px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:4px; color:white; padding:0 4px; font-size:11px; outline:none;'></td>" +
                             "<td style='padding: 10px 8px; text-align:right;'><input type='number' id='prod-price-" + p.id + "' value='" + p.price + "' style='width:90px; height:28px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:4px; color:#86efac; text-align:right; padding-right:4px; font-weight:700; outline:none;'></td>" +
                             "<td style='padding: 10px 8px; text-align:center;'><input type='number' id='prod-stock-" + p.id + "' value='" + p.stock + "' style='width:70px; height:28px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:4px; color:white; text-align:center; outline:none;'></td>" +
@@ -1073,19 +2791,110 @@
             xhr.send();
         }
 
+        function saveAllProducts() {
+            if (!window.currentProdsList || window.currentProdsList.length === 0) {
+                alert("Không có sản phẩm nào để lưu!");
+                return;
+            }
+            
+            var batchData = [];
+            for (var i = 0; i < window.currentProdsList.length; i++) {
+                var p = window.currentProdsList[i];
+                var catEl = document.getElementById("prod-cat-" + p.id);
+                var imgEl = document.getElementById("prod-img-" + p.id);
+                var priceEl = document.getElementById("prod-price-" + p.id);
+                var stockEl = document.getElementById("prod-stock-" + p.id);
+                
+                if (catEl && priceEl && stockEl) {
+                    var category = catEl.value.trim() || "Thức uống";
+                    var image_url = imgEl ? imgEl.value.trim() : "";
+                    var price = parseFloat(priceEl.value || 0);
+                    var stock = parseInt(stockEl.value || 0);
+                    
+                    if (price < 1000) {
+                        alert("Đơn giá sản phẩm '" + p.name + "' phải từ 1.000 VNĐ trở lên!");
+                        return;
+                    }
+                    if (stock < 0) {
+                        alert("Số lượng tồn kho sản phẩm '" + p.name + "' không được âm!");
+                        return;
+                    }
+                    
+                    batchData.push({
+                        id: p.id,
+                        category: category,
+                        image_url: image_url,
+                        price: price,
+                        stock: stock
+                    });
+                }
+            }
+            
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", "/api/products/batch-update", true);
+            xhr.setRequestHeader("Content-Type", "application/json");
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    var res = JSON.parse(xhr.responseText || "{}");
+                    alert(res.message || "Đã lưu tất cả sản phẩm thành công!");
+                    loadInventoryList();
+                    if (typeof fetchPosProducts === "function") fetchPosProducts();
+                } else {
+                    alert("Lỗi khi lưu sản phẩm!");
+                }
+            };
+            xhr.send(JSON.stringify({ items: batchData }));
+        }
+
+        function deleteSelectedProducts() {
+            var selectedIds = [];
+            var chks = document.querySelectorAll(".chk-prod:checked");
+            chks.forEach(function(c) {
+                selectedIds.push(parseInt(c.value));
+            });
+            
+            if (selectedIds.length === 0) {
+                alert("Vui lòng tích chọn ít nhất 1 sản phẩm để xóa!");
+                return;
+            }
+            
+            if (!confirm("Bạn có chắc chắn muốn xóa " + selectedIds.length + " sản phẩm đã chọn khỏi thực đơn?")) {
+                return;
+            }
+            
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", "/api/products/batch-delete", true);
+            xhr.setRequestHeader("Content-Type", "application/json");
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    var res = JSON.parse(xhr.responseText || "{}");
+                    alert(res.message || "Đã xóa các sản phẩm được chọn thành công!");
+                    var master = document.getElementById("chk-all-prods");
+                    if (master) master.checked = false;
+                    loadInventoryList();
+                    if (typeof fetchPosProducts === "function") fetchPosProducts();
+                } else {
+                    alert("Lỗi khi xóa sản phẩm!");
+                }
+            };
+            xhr.send(JSON.stringify({ ids: selectedIds }));
+        }
+
         function addNewProduct() {
             var name = document.getElementById("new-prod-name").value.trim();
-            var category = document.getElementById("new-prod-category").value;
+            var categoryInput = document.getElementById("new-prod-category");
+            var category = (categoryInput ? categoryInput.value.trim() : "") || "Thức uống";
             var price = parseFloat(document.getElementById("new-prod-price").value || 0);
             var stock = parseInt(document.getElementById("new-prod-stock").value || 0);
-            var image_url = document.getElementById("new-prod-image").value.trim();
+            var imageInput = document.getElementById("new-prod-image");
+            var image_url = imageInput ? imageInput.value.trim() : "";
             
             if (!name) {
                 alert("Vui lòng nhập tên sản phẩm!");
                 return;
             }
             if (price < 1000) {
-                alert("Đơn giá sản phẩm phải từ 1000 VNĐ trở lên!");
+                alert("Đơn giá sản phẩm phải từ 1.000 VNĐ trở lên!");
                 return;
             }
             if (stock < 0) {
@@ -1097,16 +2906,22 @@
             xhr.open("POST", "/api/products/add", true);
             xhr.setRequestHeader("Content-Type", "application/json");
             xhr.onload = function() {
-                var res = JSON.parse(xhr.responseText);
+                var res = JSON.parse(xhr.responseText || "{}");
                 if (xhr.status === 200) {
-                    alert(res.message);
+                    alert(res.message || "Đã thêm sản phẩm thành công!");
                     document.getElementById("new-prod-name").value = "";
+                    if (categoryInput) categoryInput.value = "";
                     document.getElementById("new-prod-price").value = "";
                     document.getElementById("new-prod-stock").value = "";
+                    if (imageInput) imageInput.value = "";
                     loadInventoryList();
+                    if (typeof fetchPosProducts === "function") fetchPosProducts();
                 } else {
-                    alert("Lỗi: " + res.message);
+                    alert("Lỗi: " + (res.message || "Không thể thêm sản phẩm!"));
                 }
+            };
+            xhr.onerror = function() {
+                alert("Lỗi kết nối máy chủ!");
             };
             xhr.send(JSON.stringify({ name: name, category: category, price: price, stock: stock, image_url: image_url }));
         }
@@ -1115,6 +2930,7 @@
             var price = parseFloat(document.getElementById("prod-price-" + id).value || 0);
             var stock = parseInt(document.getElementById("prod-stock-" + id).value || 0);
             var image_url = document.getElementById("prod-img-" + id).value.trim();
+            var category = document.getElementById("prod-cat-" + id).value.trim();
             
             if (price < 1000) {
                 alert("Đơn giá sản phẩm phải từ 1000 VNĐ trở lên!");
@@ -1122,6 +2938,10 @@
             }
             if (stock < 0) {
                 alert("Số lượng tồn kho không được âm!");
+                return;
+            }
+            if (!category) {
+                alert("Danh mục sản phẩm không được để trống!");
                 return;
             }
             
@@ -1137,7 +2957,7 @@
                     alert("Lỗi: " + res.message);
                 }
             };
-            xhr.send(JSON.stringify({ id: id, price: price, stock: stock, image_url: image_url }));
+            xhr.send(JSON.stringify({ id: id, price: price, stock: stock, image_url: image_url, category: category }));
         }
 
         function deleteProduct(id) {
@@ -1364,7 +3184,7 @@
                 card.style.borderLeftColor = "#22c55e";
             } else {
                 resolvedEl.className += " resolved-dismissed";
-                resolvedEl.textContent = "DA BO QUA - Canh bao gia";
+                resolvedEl.textContent = "Hoan tat";
                 card.style.opacity = "0.5";
             }
 
@@ -1583,45 +3403,53 @@
             eventsDiv.insertBefore(card, eventsDiv.firstChild);
         }
 
-        // === POLLING ===
-        function pollServer() {
-            pollCount++;
-            var xhr = new XMLHttpRequest();
-            xhr.open("GET", "/api/poll?_=" + Date.now(), true);
-            xhr.onload = function() {
-                if (xhr.status === 200) {
+        // === WEBSOCKET CONNECTION ===
+        function connectWebSocket() {
+            try {
+                var wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+                var wsUrl = wsProtocol + "//" + window.location.host + "/ws/admin";
+                
+                bannerText.textContent = "Đang mở WebSocket tới: " + wsUrl;
+                
+                var ws = new WebSocket(wsUrl);
+                
+                ws.onopen = function() {
                     statusDot.className = "dot dot-green";
                     statusLabel.textContent = "Dang hoat dong";
                     statusBanner.className = "status-banner status-connected";
                     bannerIcon.innerHTML = "&#9889;";
-                    bannerText.textContent = "He thong dang hoat dong - AI Camera dang giam sat (Poll #" + pollCount + ")";
-
+                    bannerText.textContent = "He thong dang hoat dong - AI Camera dang giam sat (WebSocket Live)";
+                };
+                
+                ws.onmessage = function(event) {
                     try {
-                        var data = JSON.parse(xhr.responseText);
+                        var data = JSON.parse(event.data);
                         if (data && data.event_type) {
                             renderEvent(data);
                         }
                     } catch(e) {}
-                } else {
+                };
+                
+                ws.onclose = function(e) {
                     statusDot.className = "dot dot-red";
-                    statusLabel.textContent = "Loi ket noi";
+                    statusLabel.textContent = "Mat ket noi";
                     statusBanner.className = "status-banner status-error";
                     bannerIcon.innerHTML = "&#9888;";
-                    bannerText.textContent = "Loi HTTP " + xhr.status + " - Khong the ket noi toi Server";
-                }
-            };
-            xhr.onerror = function() {
-                statusDot.className = "dot dot-red";
-                statusLabel.textContent = "Mat ket noi";
-                statusBanner.className = "status-banner status-error";
-                bannerIcon.innerHTML = "&#9888;";
-                bannerText.textContent = "Khong the ket noi toi Server. Hay tai lai trang.";
-            };
-            xhr.send();
+                    bannerText.textContent = "Mất kết nối (" + e.code + "). Đang thử lại...";
+                    setTimeout(connectWebSocket, 3000);
+                };
+                
+                ws.onerror = function(err) {
+                    statusDot.className = "dot dot-red";
+                    statusBanner.className = "status-banner status-error";
+                    bannerText.textContent = "Lỗi đường truyền WebSocket. Vui lòng F5!";
+                };
+            } catch(ex) {
+                bannerText.textContent = "JS Error: " + ex.message;
+            }
         }
 
-        setInterval(pollServer, 2000);
-        pollServer();
+        connectWebSocket();
 
         // === HIGHLIGHT CLIP FUNCTIONS ===
         var clipStatusDiv = document.getElementById("clip-status");
@@ -1874,10 +3702,7 @@
                 if (xhr.status === 200) {
                     posProducts = JSON.parse(xhr.responseText);
                     
-                    // Thêm một số dịch vụ mặc định vào cuối danh sách sản phẩm
-                    posProducts.push({id: "svc_lo", name: "Lấy lơ", category: "Yêu cầu nghiệp vụ", price: 0, image_url: ""});
-                    posProducts.push({id: "svc_xep", name: "Xếp bi", category: "Yêu cầu nghiệp vụ", price: 0, image_url: ""});
-                    posProducts.push({id: "svc_quet", name: "Quét bàn", category: "Yêu cầu nghiệp vụ", price: 0, image_url: ""});
+
                     
                     renderPosCategories();
                 }
@@ -1928,11 +3753,28 @@
                 card.onmouseout = function() { this.style.transform = "translateY(0)"; this.style.background = "rgba(255,255,255,0.05)"; };
                 card.onclick = function() { addToPosCart(p); };
                 
-                var imgHtml = p.image_url ? "<img src='" + p.image_url + "' onerror='this.style.display=\"none\"' style='width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px;'>" : "<div style='width: 100%; aspect-ratio: 1; background: rgba(0,0,0,0.3); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 24px; color: rgba(255,255,255,0.2);'>🍸</div>";
+                if (p.image_url) {
+                    var img = document.createElement("img");
+                    img.src = p.image_url;
+                    img.style.cssText = "width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 8px;";
+                    img.onerror = function() { this.style.display = "none"; };
+                    card.appendChild(img);
+                } else {
+                    var placeholder = document.createElement("div");
+                    placeholder.style.cssText = "width: 100%; aspect-ratio: 1; background: rgba(0,0,0,0.3); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 24px; color: rgba(255,255,255,0.2);";
+                    placeholder.innerHTML = "&#127864;";
+                    card.appendChild(placeholder);
+                }
                 
-                card.innerHTML = imgHtml + 
-                    "<div style='font-weight: 600; font-size: 14px; color: white; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;'>" + p.name + "</div>" +
-                    "<div style='color: #34d399; font-weight: bold; font-size: 13px;'>" + p.price.toLocaleString("vi-VN") + "đ</div>";
+                var nameDiv = document.createElement("div");
+                nameDiv.style.cssText = "font-weight: 600; font-size: 14px; color: white; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;";
+                nameDiv.textContent = p.name;
+                card.appendChild(nameDiv);
+                
+                var priceDiv = document.createElement("div");
+                priceDiv.style.cssText = "color: #34d399; font-weight: bold; font-size: 13px;";
+                priceDiv.textContent = p.price.toLocaleString("vi-VN") + "đ";
+                card.appendChild(priceDiv);
                     
                 prodContainer.appendChild(card);
             });
@@ -1973,25 +3815,55 @@
                 var row = document.createElement("div");
                 row.style.cssText = "display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px;";
                 
-                row.innerHTML = 
-                    "<div style='flex: 1; display: flex; flex-direction: column; gap: 4px;'>" +
-                        "<div style='font-weight: bold; font-size: 13px; color: white;'>" + item.name + "</div>" +
-                        "<div style='color: #9ca3af; font-size: 12px;'>" + item.price.toLocaleString("vi-VN") + "đ</div>" +
-                    "</div>" +
-                    "<div style='display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.1); border-radius: 6px; padding: 2px;'>" +
-                        "<button onclick='updatePosCartQty(\"" + item.id + "\", -1)' style='background: transparent; border: none; color: white; width: 24px; height: 24px; cursor: pointer; font-weight: bold;'>-</button>" +
-                        "<span style='font-weight: bold; font-size: 13px; min-width: 16px; text-align: center; color: white;'>" + item.qty + "</span>" +
-                        "<button onclick='updatePosCartQty(\"" + item.id + "\", 1)' style='background: transparent; border: none; color: white; width: 24px; height: 24px; cursor: pointer; font-weight: bold;'>+</button>" +
-                    "</div>";
-                    
+                var infoDiv = document.createElement("div");
+                infoDiv.style.cssText = "flex: 1; display: flex; flex-direction: column; gap: 4px;";
+                
+                var nameDiv = document.createElement("div");
+                nameDiv.style.cssText = "font-weight: bold; font-size: 13px; color: white;";
+                nameDiv.textContent = item.name;
+                infoDiv.appendChild(nameDiv);
+                
+                var priceDiv = document.createElement("div");
+                priceDiv.style.cssText = "color: #9ca3af; font-size: 12px;";
+                priceDiv.textContent = item.price.toLocaleString("vi-VN") + "\u0111";
+                infoDiv.appendChild(priceDiv);
+                
+                row.appendChild(infoDiv);
+                
+                var qtyDiv = document.createElement("div");
+                qtyDiv.style.cssText = "display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.1); border-radius: 6px; padding: 2px;";
+                
+                var btnMinus = document.createElement("button");
+                btnMinus.style.cssText = "background: transparent; border: none; color: white; width: 24px; height: 24px; cursor: pointer; font-weight: bold;";
+                btnMinus.textContent = "-";
+                btnMinus.setAttribute("data-id", item.id);
+                btnMinus.onclick = function() { updatePosCartQty(this.getAttribute("data-id"), -1); };
+                qtyDiv.appendChild(btnMinus);
+                
+                var qtySpan = document.createElement("span");
+                qtySpan.style.cssText = "font-weight: bold; font-size: 13px; min-width: 16px; text-align: center; color: white;";
+                qtySpan.textContent = item.qty;
+                qtyDiv.appendChild(qtySpan);
+                
+                var btnPlus = document.createElement("button");
+                btnPlus.style.cssText = "background: transparent; border: none; color: white; width: 24px; height: 24px; cursor: pointer; font-weight: bold;";
+                btnPlus.textContent = "+";
+                btnPlus.setAttribute("data-id", item.id);
+                btnPlus.onclick = function() { updatePosCartQty(this.getAttribute("data-id"), 1); };
+                qtyDiv.appendChild(btnPlus);
+                
+                row.appendChild(qtyDiv);
                 cartContainer.appendChild(row);
             }
             
             if (!hasItems) {
-                cartContainer.innerHTML = "<div style='text-align: center; color: #6b7280; font-style: italic; margin-top: 20px;'>Chưa có món nào</div>";
+                var emptyMsg = document.createElement("div");
+                emptyMsg.style.cssText = "text-align: center; color: #6b7280; font-style: italic; margin-top: 20px;";
+                emptyMsg.textContent = "Ch\u01b0a c\u00f3 m\u00f3n n\u00e0o";
+                cartContainer.appendChild(emptyMsg);
             }
             
-            document.getElementById("pos-total-price").textContent = total.toLocaleString("vi-VN") + "đ";
+            document.getElementById("pos-total-price").textContent = total.toLocaleString("vi-VN") + "\u0111";
         }
 
         function submitPosOrder() {
@@ -1999,7 +3871,13 @@
             var keys = Object.keys(posCart);
             for (var i = 0; i < keys.length; i++) {
                 var item = posCart[keys[i]];
-                itemsList.push({ name: item.name, qty: item.qty, price: item.price });
+                itemsList.push({
+                    name: item.name,
+                    item_name: item.name,
+                    qty: item.qty,
+                    quantity: item.qty,
+                    price: item.price
+                });
             }
             
             if (itemsList.length === 0) {
@@ -2008,26 +3886,36 @@
             }
             
             var btn = document.getElementById("pos-submit-btn");
-            btn.textContent = "Đang gửi...";
+            btn.textContent = "⏳ Đang thêm vào hóa đơn...";
             btn.disabled = true;
             
             var xhr = new XMLHttpRequest();
             xhr.open("POST", "/api/session/add-items/" + posCurrentTableId, true);
             xhr.setRequestHeader("Content-Type", "application/json");
             xhr.onload = function() {
-                btn.textContent = "Xác nhận thêm vào Bàn";
+                btn.textContent = "🛒 Xác nhận thêm vào Bàn";
                 btn.disabled = false;
                 if (xhr.status === 200) {
+                    var res = JSON.parse(xhr.responseText || "{}");
+                    alert(res.message || "Đã thêm món vào hóa đơn bàn thành công!");
+                    posCart = {};
+                    renderPosCart();
                     closePosModal();
-                    loadTables(); // Refresh dashboard
+                    loadTables(); // Refresh dashboard table cards
+                    if (typeof fetchPosProducts === "function") fetchPosProducts();
                 } else {
                     var errMsg = "Lỗi khi gọi món!";
                     try {
                         var res = JSON.parse(xhr.responseText);
                         if (res && res.message) errMsg = res.message;
                     } catch(e) {}
-                    alert(errMsg);
+                    alert("Lỗi: " + errMsg);
                 }
+            };
+            xhr.onerror = function() {
+                btn.textContent = "🛒 Xác nhận thêm vào Bàn";
+                btn.disabled = false;
+                alert("Lỗi kết nối máy chủ!");
             };
             xhr.send(JSON.stringify({ items: itemsList }));
         }
@@ -2035,66 +3923,7 @@
         // Load ban dau
         loadClips();
         loadTables();
-        
-        // Polling trang thai ban moi 3s de cap nhat thoi gian choi lien tuc
-        setInterval(loadTables, 3000);
     </script>
+
 </body>
 </html>"""
-
-@app.get("/api/inventory")
-async def get_inventory():
-    db = SessionLocal()
-    try:
-        products = db.query(Product).all()
-        stock_dict = {p.name: p.stock for p in products}
-        return JSONResponse(stock_dict)
-    finally:
-        db.close()
-
-@app.get("/api/products")
-async def list_products():
-    db = SessionLocal()
-    try:
-        products = db.query(Product).order_by(Product.id).all()
-        return JSONResponse([
-            {"id": p.id, "name": p.name, "price": p.price, "stock": p.stock, "category": p.category, "image_url": p.image_url or ""}
-            for p in products
-        ])
-    finally:
-        db.close()
-
-@app.post("/api/products/add")
-async def add_product(payload: dict):
-    name = payload.get("name", "").strip()
-    price = float(payload.get("price", 0))
-    stock = int(payload.get("stock", 0))
-    category = payload.get("category", "").strip()
-    image_url = payload.get("image_url", "").strip()
-    
-    if not name or price < 1000 or stock < 0 or not category:
-        return JSONResponse({"status": "error", "message": "Đơn giá phải từ 1000 VNĐ trở lên và tồn kho không được âm"}, status_code=400)
-        
-    db = SessionLocal()
-    try:
-        exists = db.query(Product).filter(Product.name == name).first()
-        if exists:
-            return JSONResponse({"status": "error", "message": f"Sản phẩm {name} đã tồn tại!"}, status_code=400)
-            
-        new_prod = Product(name=name, price=price, stock=stock, category=category, image_url=image_url)
-        db.add(new_prod)
-        db.commit()
-        return JSONResponse({"status": "ok", "message": f"Đã thêm sản phẩm {name}!"})
-    except Exception as e:
-        return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
-    finally:
-        db.close()
-
-@app.post("/api/products/update")
-async def update_product(payload: dict):
-    prod_id = int(payload.get("id"))
-    price = float(payload.get("price", 0))
-    stock = int(payload.get("stock", 0))
-    image_url = payload.get("image_url", "").strip()
-    
-    if price < 1000 or stock < 0:
