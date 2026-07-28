@@ -26,50 +26,59 @@ router = APIRouter(prefix="/api", tags=["Tables"])
 
 @router.get("/tables")
 async def list_tables():
-    db = SessionLocal()
-    try:
-        tables = db.query(BilliardTable).order_by(BilliardTable.id).all()
-        result = []
-        for t in tables:
-            active_session = db.query(PlaySession).filter(
-                PlaySession.table_id == t.id, 
-                PlaySession.status == "ACTIVE"
-            ).first()
-            
-            session_data = None
-            if active_session:
-                items = db.query(SessionOrderItem).filter(
-                    SessionOrderItem.session_id == active_session.id
-                ).all()
-                items_list = []
-                for item in items:
-                    items_list.append({
-                        "id": item.id,
-                        "item_name": item.item_name,
-                        "quantity": item.quantity,
-                        "price": item.price,
-                        "total_price": item.total_price
-                    })
+    import asyncio
+    loop = asyncio.get_event_loop()
+    
+    def _fetch():
+        db = SessionLocal()
+        try:
+            tables = db.query(BilliardTable).order_by(BilliardTable.id).all()
+            result = []
+            for t in tables:
+                active_session = db.query(PlaySession).filter(
+                    PlaySession.table_id == t.id, 
+                    PlaySession.status == "ACTIVE"
+                ).first()
                 
-                session_data = {
-                    "id": active_session.id,
-                    "start_time": active_session.start_time.isoformat() + "Z",
-                    "order_items": items_list
-                }
-                
-            result.append({
-                "id": t.id,
-                "name": t.name,
-                "camera_url": t.camera_url,
-                "current_status": t.current_status,
-                "table_type": t.table_type,
-                "table_tier": t.table_tier,
-                "price_per_hour": t.price_per_hour,
-                "active_session": session_data
-            })
-        return JSONResponse(result)
-    finally:
-        db.close()
+                session_data = None
+                if active_session:
+                    items = db.query(SessionOrderItem).filter(
+                        SessionOrderItem.session_id == active_session.id
+                    ).all()
+                    items_list = []
+                    for item in items:
+                        items_list.append({
+                            "id": item.id,
+                            "item_name": item.item_name,
+                            "quantity": item.quantity,
+                            "price": item.price,
+                            "total_price": item.total_price
+                        })
+                    
+                    session_data = {
+                        "id": active_session.id,
+                        "start_time": active_session.start_time.isoformat() + "Z",
+                        "order_items": items_list
+                    }
+                    
+                result.append({
+                    "id": t.id,
+                    "name": t.name,
+                    "camera_url": t.camera_url,
+                    "current_status": t.current_status,
+                    "table_type": t.table_type,
+                    "table_tier": t.table_tier,
+                    "price_per_hour": t.price_per_hour,
+                    "qr_token": generate_table_token(t.id),
+                    "active_session": session_data
+                })
+            return result
+        finally:
+            db.close()
+    
+    result = await loop.run_in_executor(None, _fetch)
+    return JSONResponse(result)
+
 
 @router.post("/admin/tables/add")
 async def admin_add_table(payload: dict):

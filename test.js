@@ -319,7 +319,7 @@
         }
 
         // === LOAD TABLES DATA ===
-        function loadTables() {
+        function loadTables(callback) {
             var xhr = new XMLHttpRequest();
             xhr.open("GET", "/api/tables?_" + Date.now(), true);
             xhr.onload = function() {
@@ -328,6 +328,7 @@
                     tablesLocalData = tables;
                     renderTablesGrid(tables);
                     syncStreamStates(tables); // Cập nhật trạng thái bật/tắt camera
+                    if (typeof callback === 'function') callback();
                 }
             };
             xhr.send();
@@ -676,7 +677,8 @@
                     xhr.open("POST", "/api/session/stop/" + tableId, true);
                     xhr.onload = function() {
                         if (xhr.status === 200) {
-                            var bill = JSON.parse(xhr.responseText);
+                            var res = JSON.parse(xhr.responseText);
+                            var bill = res.bill || res;
                             Swal.fire({
                                 title: 'Thanh toán thành công!',
                                 text: 'Bạn có muốn in hóa đơn (Bill) giấy cho khách không?',
@@ -720,6 +722,7 @@
                 t.active_session.order_items.forEach(function(item) {
                     serviceTotal += item.total_price;
                     itemsList.push({
+                        id: item.id,
                         item_name: item.item_name,
                         quantity: item.quantity,
                         price: item.price,
@@ -731,6 +734,7 @@
             var totalBill = playFee + serviceTotal;
             
             var tempBill = {
+                table_id: t.id,
                 table_name: t.name,
                 start_time: t.active_session.start_time,
                 end_time: endTime.toISOString(),
@@ -757,8 +761,8 @@
             var start = new Date(bill.start_time);
             var end = new Date(bill.end_time);
             
-            document.getElementById("bill-start-time").textContent = start.toLocaleTimeString();
-            document.getElementById("bill-end-time").textContent = end.toLocaleTimeString();
+            document.getElementById("bill-start-time").textContent = start.toLocaleString('vi-VN');
+            document.getElementById("bill-end-time").textContent = end.toLocaleString('vi-VN');
             
             var endTimeRow = document.getElementById("bill-end-time-row");
             if (endTimeRow) {
@@ -773,12 +777,26 @@
             
             if (bill.items && bill.items.length > 0) {
                 bill.items.forEach(function(item) {
+                    var itemName = item.item_name || item.name || "";
+                    var itemPrice = item.price || (item.quantity ? item.total_price / item.quantity : 0);
                     var tr = document.createElement("tr");
                     tr.style.borderBottom = "1px solid rgba(255,255,255,0.04)";
+                    
+                    var actionsHtml = "";
+                    if (bill.is_preview && item.id && bill.table_id) {
+                        var safeName = itemName.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                        actionsHtml = 
+                            "<span style='float:right; display:inline-flex; align-items:center; gap:4px; margin-left:8px;'>" +
+                                "<button onclick='updateBillItemQty(" + item.id + ", " + (item.quantity - 1) + ", " + bill.table_id + ")' style='background:#374151; color:white; border:none; border-radius:4px; width:22px; height:22px; cursor:pointer; font-weight:bold; display:inline-flex; align-items:center; justify-content:center;' title='Giảm 1'>-</button>" +
+                                "<button onclick='updateBillItemQty(" + item.id + ", " + (item.quantity + 1) + ", " + bill.table_id + ")' style='background:#374151; color:white; border:none; border-radius:4px; width:22px; height:22px; cursor:pointer; font-weight:bold; display:inline-flex; align-items:center; justify-content:center;' title='Tăng 1'>+</button>" +
+                                "<button onclick='deleteBillItem(" + item.id + ", " + bill.table_id + ", \"" + safeName + "\")' style='background:#ef4444; color:white; border:none; border-radius:4px; padding:2px 6px; cursor:pointer; font-size:11px;' title='Xóa món'>🗑️</button>" +
+                            "</span>";
+                    }
+                    
                     tr.innerHTML = 
-                        "<td style='padding: 6px 0; color: #e5e7eb;'>" + item.item_name + "</td>" +
+                        "<td style='padding: 6px 0; color: #e5e7eb;'>" + itemName + actionsHtml + "</td>" +
                         "<td style='padding: 6px 8px; text-align: center; font-weight: 600; color: #fbbf24;'>" + item.quantity + "</td>" +
-                        "<td style='padding: 6px 8px; text-align: right; font-variant-numeric: tabular-nums;'>" + Math.ceil(item.price).toLocaleString("vi-VN") + " đ</td>" +
+                        "<td style='padding: 6px 8px; text-align: right; font-variant-numeric: tabular-nums;'>" + Math.ceil(itemPrice).toLocaleString("vi-VN") + " đ</td>" +
                         "<td style='padding: 6px 0; text-align: right; font-weight: 700; color: white; font-variant-numeric: tabular-nums;'>" + Math.ceil(item.total_price).toLocaleString("vi-VN") + " đ</td>";
                     itemsBody.appendChild(tr);
                 });
@@ -805,6 +823,51 @@
             playAlert();
         }
 
+        function updateBillItemQty(itemId, newQty, tableId) {
+            if (newQty <= 0) {
+                if (!confirm("Bạn có chắc muốn xóa món này khỏi hóa đơn?")) return;
+            }
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", "/api/session/item/" + itemId + "/update", true);
+            xhr.setRequestHeader("Content-Type", "application/json");
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    loadTables(function() {
+                        viewActiveBill(tableId);
+                    });
+                } else {
+                    try {
+                        var res = JSON.parse(xhr.responseText);
+                        swal("Lỗi", res.message || "Không thể cập nhật số lượng", "error");
+                    } catch(e) {
+                        swal("Lỗi", "Không thể cập nhật số lượng", "error");
+                    }
+                }
+            };
+            xhr.send(JSON.stringify({ quantity: newQty }));
+        }
+
+        function deleteBillItem(itemId, tableId, itemName) {
+            if (!confirm("Bạn có chắc muốn xóa món '" + itemName + "' khỏi hóa đơn?")) return;
+            var xhr = new XMLHttpRequest();
+            xhr.open("DELETE", "/api/session/item/" + itemId, true);
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    loadTables(function() {
+                        viewActiveBill(tableId);
+                    });
+                } else {
+                    try {
+                        var res = JSON.parse(xhr.responseText);
+                        swal("Lỗi", res.message || "Không thể xóa món", "error");
+                    } catch(e) {
+                        swal("Lỗi", "Không thể xóa món", "error");
+                    }
+                }
+            };
+            xhr.send();
+        }
+
         var currentBillToPrint = null;
         function printBill() {
             if (!currentBillToPrint) return;
@@ -812,10 +875,12 @@
             var itemsHtml = "";
             if (bill.items && bill.items.length > 0) {
                 bill.items.forEach(function(item) {
+                    var itemName = item.item_name || item.name || "";
+                    var itemPrice = item.price || (item.quantity ? item.total_price / item.quantity : 0);
                     itemsHtml += "<tr>" +
-                        "<td>" + item.item_name + "</td>" +
+                        "<td>" + itemName + "</td>" +
                         "<td style='text-align:center;'>" + item.quantity + "</td>" +
-                        "<td style='text-align:right;'>" + Math.ceil(item.price).toLocaleString("vi-VN") + "</td>" +
+                        "<td style='text-align:right;'>" + Math.ceil(itemPrice).toLocaleString("vi-VN") + "</td>" +
                         "<td style='text-align:right;'>" + Math.ceil(item.total_price).toLocaleString("vi-VN") + "</td>" +
                     "</tr>";
                 });
@@ -823,8 +888,8 @@
                 itemsHtml = "<tr><td colspan='4' style='text-align:center;'>Không gọi dịch vụ</td></tr>";
             }
             
-            var sTime = new Date(bill.start_time).toLocaleTimeString('vi-VN');
-            var eTime = bill.is_preview ? "--:--" : new Date(bill.end_time).toLocaleTimeString('vi-VN');
+            var sTime = new Date(bill.start_time).toLocaleString('vi-VN');
+            var eTime = bill.is_preview ? "--:--" : new Date(bill.end_time).toLocaleString('vi-VN');
             var printTime = new Date().toLocaleString('vi-VN');
             
             var html = "<html><head><title>In Hóa Đơn</title>" +

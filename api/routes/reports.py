@@ -86,7 +86,7 @@ async def get_revenue_report(start_date: str = None, end_date: str = None):
 @router.post("/clip/{table_id}")
 async def trigger_clip(table_id: int):
     try:
-        r = redis_lib.Redis(host='localhost', port=6379, db=0, socket_timeout=0.2, socket_connect_timeout=0.2)
+        r = redis_lib.Redis(host='127.0.0.1', port=6379, db=0, socket_timeout=0.2, socket_connect_timeout=0.2)
         payload = json.dumps({"command": "save_clip", "table_id": table_id, "timestamp": time.time()})
         r.publish('bida_commands', payload)
         return JSONResponse({"status": "ok", "message": f"Da phat lenh trich xuat highlight cho ban {table_id}"})
@@ -96,7 +96,7 @@ async def trigger_clip(table_id: int):
 @router.get("/clip-status/{table_id}")
 async def get_clip_status(table_id: int):
     try:
-        r = redis_lib.Redis(host='localhost', port=6379, db=0, socket_timeout=0.2, socket_connect_timeout=0.2)
+        r = redis_lib.Redis(host='127.0.0.1', port=6379, db=0, socket_timeout=0.2, socket_connect_timeout=0.2)
         val = r.get(f"clip_status_table_{table_id}")
         if val:
             return JSONResponse(json.loads(val.decode('utf-8')))
@@ -110,7 +110,7 @@ async def trigger_past_highlight(table_id: int, payload: dict = None):
     if payload and "seconds" in payload:
         seconds = int(payload["seconds"])
     try:
-        r = redis_lib.Redis(host='localhost', port=6379, db=0, socket_timeout=0.2, socket_connect_timeout=0.2)
+        r = redis_lib.Redis(host='127.0.0.1', port=6379, db=0, socket_timeout=0.2, socket_connect_timeout=0.2)
         cmd_data = {
             "command": "save_past_highlight",
             "table_id": table_id,

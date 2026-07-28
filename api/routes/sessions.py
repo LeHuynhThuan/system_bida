@@ -266,6 +266,82 @@ async def add_items_to_session(table_id: int, payload: dict):
     finally:
         db.close()
 
+@router.delete("/session/item/{item_id}")
+async def delete_session_item(item_id: int):
+    db = SessionLocal()
+    try:
+        item = db.query(SessionOrderItem).filter(SessionOrderItem.id == item_id).first()
+        if not item:
+            return JSONResponse({"status": "error", "message": "Không tìm thấy món ăn trong bill"}, status_code=404)
+        
+        session = db.query(PlaySession).filter(PlaySession.id == item.session_id).first()
+        if not session or session.status != "ACTIVE":
+            return JSONResponse({"status": "error", "message": "Chỉ có thể sửa đổi bill của bàn đang chơi"}, status_code=400)
+            
+        item_name = item.item_name
+        table_id = session.table_id
+        db.delete(item)
+        db.commit()
+        
+        try:
+            event_data = {
+                "id": f"evt_{time.time()}",
+                "table_id": table_id,
+                "event_type": "BILL_ITEM_UPDATED",
+                "message": f"Thu ngân đã xóa món '{item_name}' khỏi hóa đơn."
+            }
+            await websocket_manager.broadcast(json.dumps(event_data))
+        except Exception:
+            pass
+            
+        return JSONResponse({"status": "ok", "message": "Đã xóa món khỏi hóa đơn!"})
+    except Exception as e:
+        return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
+    finally:
+        db.close()
+
+@router.post("/session/item/{item_id}/update")
+async def update_session_item(item_id: int, payload: dict):
+    new_qty = int(payload.get("quantity", 0))
+    db = SessionLocal()
+    try:
+        item = db.query(SessionOrderItem).filter(SessionOrderItem.id == item_id).first()
+        if not item:
+            return JSONResponse({"status": "error", "message": "Không tìm thấy món trong bill"}, status_code=404)
+            
+        session = db.query(PlaySession).filter(PlaySession.id == item.session_id).first()
+        if not session or session.status != "ACTIVE":
+            return JSONResponse({"status": "error", "message": "Chỉ có thể sửa đổi bill của bàn đang chơi"}, status_code=400)
+            
+        table_id = session.table_id
+        item_name = item.item_name
+        if new_qty <= 0:
+            db.delete(item)
+            msg = f"Đã xóa món '{item_name}' khỏi hóa đơn!"
+        else:
+            item.quantity = new_qty
+            item.total_price = item.quantity * item.price
+            msg = f"Đã cập nhật số lượng '{item_name}' thành {new_qty}!"
+            
+        db.commit()
+        
+        try:
+            event_data = {
+                "id": f"evt_{time.time()}",
+                "table_id": table_id,
+                "event_type": "BILL_ITEM_UPDATED",
+                "message": msg
+            }
+            await websocket_manager.broadcast(json.dumps(event_data))
+        except Exception:
+            pass
+            
+        return JSONResponse({"status": "ok", "message": msg})
+    except Exception as e:
+        return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
+    finally:
+        db.close()
+
 @router.post("/session/stop/{table_id}")
 async def stop_session(table_id: int):
     db = SessionLocal()
@@ -283,7 +359,7 @@ async def stop_session(table_id: int):
         if not active_session:
             return JSONResponse({"status": "error", "message": "Khong tim thay phien choi active"}, status_code=400)
             
-        end_time = datetime.now()
+        end_time = datetime.utcnow()
         duration = end_time - active_session.start_time
         total_minutes = max(1, math.ceil(duration.total_seconds() / 60))
         
@@ -313,7 +389,7 @@ async def stop_session(table_id: int):
                 "play_fee": play_fee,
                 "service_total": service_total,
                 "total_bill": total_bill,
-                "items": [{"name": i.item_name, "quantity": i.quantity, "total_price": i.total_price} for i in items]
+                "items": [{"name": i.item_name, "item_name": i.item_name, "quantity": i.quantity, "price": i.price, "total_price": i.total_price} for i in items]
             }
         })
     except Exception as e:
@@ -335,7 +411,7 @@ async def notify_client(table_id: int, payload: dict):
     }
     client_messages_store[table_id] = data
     try:
-        r = redis_lib.Redis(host='localhost', port=6379, db=0, socket_timeout=0.2, socket_connect_timeout=0.2)
+        r = redis_lib.Redis(host='127.0.0.1', port=6379, db=0, socket_timeout=0.2, socket_connect_timeout=0.2)
         r.set(f"client_msg_{table_id}", json.dumps(data))
         r.expire(f"client_msg_{table_id}", 300)
     except Exception:
@@ -348,7 +424,7 @@ async def poll_client(table_id: int):
     if table_id in client_messages_store:
         data = client_messages_store.pop(table_id)
     try:
-        r = redis_lib.Redis(host='localhost', port=6379, db=0, socket_timeout=0.2, socket_connect_timeout=0.2)
+        r = redis_lib.Redis(host='127.0.0.1', port=6379, db=0, socket_timeout=0.2, socket_connect_timeout=0.2)
         if data:
             r.delete(f"client_msg_{table_id}")
         else:
@@ -408,7 +484,7 @@ async def transfer_session(from_table_id: int, to_table_id: int):
         client_messages_store[from_table_id] = notify_data
         
         try:
-            r = redis_lib.Redis(host='localhost', port=6379, db=0, socket_timeout=0.2, socket_connect_timeout=0.2)
+            r = redis_lib.Redis(host='127.0.0.1', port=6379, db=0, socket_timeout=0.2, socket_connect_timeout=0.2)
             r.set(f"client_msg_{from_table_id}", json.dumps(notify_data))
             r.expire(f"client_msg_{from_table_id}", 300)
         except Exception:
@@ -425,13 +501,21 @@ async def transfer_session(from_table_id: int, to_table_id: int):
 
 @router.get("/poll")
 async def poll_events():
-    return JSONResponse({"status": "ok", "events": []})
+    try:
+        if websocket_manager.latest_payload and websocket_manager.latest_payload != "{}":
+            data = json.loads(websocket_manager.latest_payload)
+            events = [data] if data else []
+        else:
+            events = []
+    except Exception:
+        events = []
+    return JSONResponse({"status": "ok", "events": events})
 
 @router.get("/history")
 async def get_history():
     db = SessionLocal()
     try:
-        now = datetime.now()
+        now = datetime.utcnow()
         sessions = db.query(PlaySession).filter(PlaySession.status == "COMPLETED").order_by(PlaySession.end_time.desc()).all()
         
         result = []
@@ -459,7 +543,7 @@ async def get_history():
                 "service_total": service_total,
                 "total_bill": total_bill,
                 "can_delete": can_delete,
-                "items": [{"item_name": i.item_name, "quantity": i.quantity, "total_price": i.total_price} for i in items]
+                "items": [{"name": i.item_name, "item_name": i.item_name, "quantity": i.quantity, "price": i.price, "total_price": i.total_price} for i in items]
             })
         return JSONResponse(result)
     finally:
@@ -473,7 +557,7 @@ async def delete_history(payload: dict):
         
     db = SessionLocal()
     try:
-        now = datetime.now()
+        now = datetime.utcnow()
         deleted_count = 0
         cannot_delete_count = 0
         

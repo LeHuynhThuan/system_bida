@@ -11,7 +11,7 @@ load_dotenv(os.path.join(BASE_DIR, ".env"))
 db_type = os.getenv("DATABASE_TYPE", "sqlite").lower()
 db_user = os.getenv("DB_USER", "postgres")
 db_pass = os.getenv("DB_PASSWORD", "")
-db_host = os.getenv("DB_HOST", "localhost")
+db_host = os.getenv("DB_HOST", "127.0.0.1")
 db_port = os.getenv("DB_PORT", "5432")
 db_name = os.getenv("DB_NAME", "bida_db")
 
@@ -52,8 +52,20 @@ elif db_type == "mysql":
 else:
     print("[DB] Su dung database SQLite mac dinh.")
 
-# FIX BUG: Truyen connect_args dung format tu dien
-engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args=connect_args)
+# Cau hinh connection pool de tranh bi treo/cham khi co nhieu request dong thoi
+# pool_pre_ping=True: tu dong kiem tra ket noi truoc khi dung, tranh "stale connection"
+# pool_recycle=1800: tai tao ket noi sau 30 phut, tranh bi MySQL server dong ket noi
+_pool_kwargs = {}
+if "sqlite" not in SQLALCHEMY_DATABASE_URL:
+    _pool_kwargs = {
+        "pool_size": 10,       # So ket noi toi da trong pool
+        "max_overflow": 20,    # So ket noi them co the tao khi pool day
+        "pool_timeout": 10,    # Cho toi da 10s de lay ket noi tu pool
+        "pool_recycle": 1800,  # Tai tao ket noi sau 30 phut
+        "pool_pre_ping": True, # Kiem tra ket noi truoc khi su dung
+    }
+
+engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args=connect_args, **_pool_kwargs)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def get_db():

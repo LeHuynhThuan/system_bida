@@ -10,7 +10,7 @@ from collections import deque
 from datetime import datetime
 
 # Redis (Synchronous client)
-redis_client = redis.Redis(host='localhost', port=6379, db=0)
+redis_client = redis.Redis(host='127.0.0.1', port=6379, db=0)
 
 # Thu muc luu clips va archives
 CLIPS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "clips")

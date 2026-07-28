@@ -13,7 +13,7 @@ def start_redis_listener_thread(loop):
     def listener():
         try:
             # Sử dụng Redis đồng bộ
-            redis_client = redis.Redis(host='localhost', port=6379, db=0)
+            redis_client = redis.Redis(host='127.0.0.1', port=6379, db=0)
             pubsub = redis_client.pubsub()
             pubsub.subscribe('bida_ai_events')
             print("[API] [OK] Da khoi dong luong lang nghe Redis (Thread rieng)")

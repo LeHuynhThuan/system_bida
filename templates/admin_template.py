@@ -1206,10 +1206,9 @@ admin_html = """<!DOCTYPE html>
         </div>
     </div>
 
-    <!-- STATUS BANNER -->
     <div class="status-banner status-connecting" id="status-banner">
         <span id="banner-icon">&#9881;</span>
-        <span id="banner-text">Dang khoi tao ket noi toi AI Camera Server...</span>
+        <span id="banner-text">Đang kiểm tra kết nối AI Camera Server...</span>
     </div>
 
     <!-- APP CONTAINER -->
@@ -1861,21 +1860,21 @@ admin_html = """<!DOCTYPE html>
         // Chỉ refresh ảnh của các camera đang ở trạng thái Bật Stream (streamStates[id] = true)
         function refreshCam(id) {
             if (!streamStates[id]) {
-                setTimeout(function() { refreshCam(id); }, 1500);
+                setTimeout(function() { refreshCam(id); }, 3000);
                 return;
             }
             var liveImg = document.getElementById("live-cam-" + id);
             if (!liveImg) {
-                setTimeout(function() { refreshCam(id); }, 1500);
+                setTimeout(function() { refreshCam(id); }, 3000);
                 return;
             }
             var newImg = new Image();
             newImg.onload = function() {
                 liveImg.src = newImg.src;
-                setTimeout(function() { refreshCam(id); }, 1500);
+                setTimeout(function() { refreshCam(id); }, 3000);
             };
             newImg.onerror = function() {
-                setTimeout(function() { refreshCam(id); }, 1500);
+                setTimeout(function() { refreshCam(id); }, 3000);
             };
             newImg.src = "/api/live/" + id + "?t=" + Date.now();
         }
@@ -1943,12 +1942,14 @@ admin_html = """<!DOCTYPE html>
             document.getElementById('history-modal').style.display = 'none';
         }
 
+        var historyLocalData = [];
         function loadHistory() {
             var xhr = new XMLHttpRequest();
             xhr.open('GET', '/api/history', true);
             xhr.onload = function() {
                 if (xhr.status === 200) {
-                    var history = JSON.parse(xhr.responseText);
+                    historyLocalData = JSON.parse(xhr.responseText);
+                    var history = historyLocalData;
                     var tbody = document.getElementById('history-items-body');
                     tbody.innerHTML = '';
                     history.forEach(function(h) {
@@ -1981,7 +1982,10 @@ admin_html = """<!DOCTYPE html>
                         detailTr.style.display = 'none';
                         detailTr.innerHTML = `
                             <td colspan="7" style="padding: 10px 24px; background: rgba(0,0,0,0.3); border-bottom: 1px solid rgba(255,255,255,0.06);">
-                                <div style="font-size: 11px; color: #9ca3af; margin-bottom: 6px;">Tiền giờ: <b style="color: white;">${h.play_fee.toLocaleString('vi-VN')} đ</b></div>
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                                    <div style="font-size: 11px; color: #9ca3af;">Tiền giờ: <b style="color: white;">${h.play_fee.toLocaleString('vi-VN')} đ</b></div>
+                                    <button onclick="printHistoryBill(${h.id})" style="padding: 4px 10px; background: linear-gradient(135deg, #10b981, #059669); border: none; color: white; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: 600;">🖨️ In lại hóa đơn</button>
+                                </div>
                                 <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
                                     <tr style="color: #fbbf24; border-bottom: 1px dashed rgba(255,255,255,0.1);">
                                         <th style="padding: 4px 8px; text-align: left;">Món ăn / Dịch vụ</th>
@@ -2007,6 +2011,12 @@ admin_html = """<!DOCTYPE html>
             if (tr) {
                 tr.style.display = tr.style.display === 'none' ? 'table-row' : 'none';
             }
+        }
+
+        function printHistoryBill(id) {
+            var h = historyLocalData.find(function(item) { return item.id === id; });
+            if (!h) return;
+            showBillInvoice(h);
         }
 
         function toggleAllHistory(source) {
@@ -2054,19 +2064,55 @@ admin_html = """<!DOCTYPE html>
         }
 
         // === LOAD TABLES DATA ===
-        function loadTables() {
+        function loadTables(callback) {
             var xhr = new XMLHttpRequest();
             xhr.open("GET", "/api/tables?_" + Date.now(), true);
+            xhr.timeout = 8000; // Timeout 8 giay de tranh bi treo banner
             xhr.onload = function() {
                 if (xhr.status === 200) {
-                    var tables = JSON.parse(xhr.responseText);
-                    tablesLocalData = tables;
-                    renderTablesGrid(tables);
-                    syncStreamStates(tables); // Cập nhật trạng thái bật/tắt camera
+                    try {
+                        var tables = JSON.parse(xhr.responseText);
+                        tablesLocalData = tables;
+                        renderTablesGrid(tables);
+                        syncStreamStates(tables);
+                        // Khi load ban thanh cong => server dang hoat dong => chuyen banner xanh
+                        if (statusBanner.className.indexOf("status-connected") === -1) {
+                            statusDot.className = "dot dot-green";
+                            statusLabel.textContent = "Dang hoat dong";
+                            statusBanner.className = "status-banner status-connected";
+                            bannerIcon.innerHTML = "&#9889;";
+                            bannerText.textContent = "He thong dang hoat dong - AI Camera dang giam sat";
+                        }
+                        if (typeof callback === 'function') callback();
+                    } catch(e) {
+                        console.warn("loadTables parse error:", e);
+                    }
+                } else {
+                    // Server loi, hien thi trang thai loi
+                    statusDot.className = "dot dot-red";
+                    statusLabel.textContent = "Loi ket noi";
+                    statusBanner.className = "status-banner status-error";
+                    bannerIcon.innerHTML = "&#9888;";
+                    bannerText.textContent = "Loi ket noi server (HTTP " + xhr.status + ") - Dang thu lai...";
                 }
                 setTimeout(loadTables, 3000);
             };
             xhr.onerror = function() {
+                // Loi mang
+                statusDot.className = "dot dot-red";
+                statusLabel.textContent = "Mat ket noi";
+                statusBanner.className = "status-banner status-error";
+                bannerIcon.innerHTML = "&#9888;";
+                bannerText.textContent = "Mat ket noi den server - Dang thu lai...";
+                setTimeout(loadTables, 3000);
+            };
+            xhr.ontimeout = function() {
+                // Request bi timeout
+                statusDot.className = "dot dot-red";
+                statusLabel.textContent = "Timeout";
+                statusBanner.className = "status-banner status-error";
+                bannerIcon.innerHTML = "&#9888;";
+                bannerText.textContent = "Server phan hoi cham (>8s) - Dang thu lai...";
                 setTimeout(loadTables, 3000);
             };
             xhr.send();
@@ -2469,7 +2515,8 @@ admin_html = """<!DOCTYPE html>
                     xhr.open("POST", "/api/session/stop/" + tableId, true);
                     xhr.onload = function() {
                         if (xhr.status === 200) {
-                            var bill = JSON.parse(xhr.responseText);
+                            var res = JSON.parse(xhr.responseText);
+                            var bill = res.bill || res;
                             Swal.fire({
                                 title: 'Thanh toán thành công!',
                                 text: 'Bạn có muốn in hóa đơn (Bill) giấy cho khách không?',
@@ -2513,6 +2560,7 @@ admin_html = """<!DOCTYPE html>
                 t.active_session.order_items.forEach(function(item) {
                     serviceTotal += item.total_price;
                     itemsList.push({
+                        id: item.id,
                         item_name: item.item_name,
                         quantity: item.quantity,
                         price: item.price,
@@ -2524,6 +2572,7 @@ admin_html = """<!DOCTYPE html>
             var totalBill = playFee + serviceTotal;
             
             var tempBill = {
+                table_id: t.id,
                 table_name: t.name,
                 start_time: t.active_session.start_time,
                 end_time: endTime.toISOString(),
@@ -2550,8 +2599,8 @@ admin_html = """<!DOCTYPE html>
             var start = new Date(bill.start_time);
             var end = new Date(bill.end_time);
             
-            document.getElementById("bill-start-time").textContent = start.toLocaleTimeString();
-            document.getElementById("bill-end-time").textContent = end.toLocaleTimeString();
+            document.getElementById("bill-start-time").textContent = start.toLocaleString('vi-VN');
+            document.getElementById("bill-end-time").textContent = end.toLocaleString('vi-VN');
             
             var endTimeRow = document.getElementById("bill-end-time-row");
             if (endTimeRow) {
@@ -2566,12 +2615,26 @@ admin_html = """<!DOCTYPE html>
             
             if (bill.items && bill.items.length > 0) {
                 bill.items.forEach(function(item) {
+                    var itemName = item.item_name || item.name || "";
+                    var itemPrice = item.price || (item.quantity ? item.total_price / item.quantity : 0);
                     var tr = document.createElement("tr");
                     tr.style.borderBottom = "1px solid rgba(255,255,255,0.04)";
+                    
+                    var actionsHtml = "";
+                    if (bill.is_preview && item.id && bill.table_id) {
+                        var safeName = itemName.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+                        actionsHtml = 
+                            "<span style='float:right; display:inline-flex; align-items:center; gap:4px; margin-left:8px;'>" +
+                                "<button onclick='updateBillItemQty(" + item.id + ", " + (item.quantity - 1) + ", " + bill.table_id + ")' style='background:#374151; color:white; border:none; border-radius:4px; width:22px; height:22px; cursor:pointer; font-weight:bold; display:inline-flex; align-items:center; justify-content:center;' title='Giảm 1'>-</button>" +
+                                "<button onclick='updateBillItemQty(" + item.id + ", " + (item.quantity + 1) + ", " + bill.table_id + ")' style='background:#374151; color:white; border:none; border-radius:4px; width:22px; height:22px; cursor:pointer; font-weight:bold; display:inline-flex; align-items:center; justify-content:center;' title='Tăng 1'>+</button>" +
+                                "<button onclick='deleteBillItem(" + item.id + ", " + bill.table_id + ", \\\"" + safeName + "\\\")' style='background:#ef4444; color:white; border:none; border-radius:4px; padding:2px 6px; cursor:pointer; font-size:11px;' title='Xóa món'>🗑️</button>" +
+                            "</span>";
+                    }
+                    
                     tr.innerHTML = 
-                        "<td style='padding: 6px 0; color: #e5e7eb;'>" + item.item_name + "</td>" +
+                        "<td style='padding: 6px 0; color: #e5e7eb;'>" + itemName + actionsHtml + "</td>" +
                         "<td style='padding: 6px 8px; text-align: center; font-weight: 600; color: #fbbf24;'>" + item.quantity + "</td>" +
-                        "<td style='padding: 6px 8px; text-align: right; font-variant-numeric: tabular-nums;'>" + Math.ceil(item.price).toLocaleString("vi-VN") + " đ</td>" +
+                        "<td style='padding: 6px 8px; text-align: right; font-variant-numeric: tabular-nums;'>" + Math.ceil(itemPrice).toLocaleString("vi-VN") + " đ</td>" +
                         "<td style='padding: 6px 0; text-align: right; font-weight: 700; color: white; font-variant-numeric: tabular-nums;'>" + Math.ceil(item.total_price).toLocaleString("vi-VN") + " đ</td>";
                     itemsBody.appendChild(tr);
                 });
@@ -2598,6 +2661,51 @@ admin_html = """<!DOCTYPE html>
             playAlert();
         }
 
+        function updateBillItemQty(itemId, newQty, tableId) {
+            if (newQty <= 0) {
+                if (!confirm("Bạn có chắc muốn xóa món này khỏi hóa đơn?")) return;
+            }
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", "/api/session/item/" + itemId + "/update", true);
+            xhr.setRequestHeader("Content-Type", "application/json");
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    loadTables(function() {
+                        viewActiveBill(tableId);
+                    });
+                } else {
+                    try {
+                        var res = JSON.parse(xhr.responseText);
+                        swal("Lỗi", res.message || "Không thể cập nhật số lượng", "error");
+                    } catch(e) {
+                        swal("Lỗi", "Không thể cập nhật số lượng", "error");
+                    }
+                }
+            };
+            xhr.send(JSON.stringify({ quantity: newQty }));
+        }
+
+        function deleteBillItem(itemId, tableId, itemName) {
+            if (!confirm("Bạn có chắc muốn xóa món '" + itemName + "' khỏi hóa đơn?")) return;
+            var xhr = new XMLHttpRequest();
+            xhr.open("DELETE", "/api/session/item/" + itemId, true);
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    loadTables(function() {
+                        viewActiveBill(tableId);
+                    });
+                } else {
+                    try {
+                        var res = JSON.parse(xhr.responseText);
+                        swal("Lỗi", res.message || "Không thể xóa món", "error");
+                    } catch(e) {
+                        swal("Lỗi", "Không thể xóa món", "error");
+                    }
+                }
+            };
+            xhr.send();
+        }
+
         var currentBillToPrint = null;
         function printBill() {
             if (!currentBillToPrint) return;
@@ -2605,10 +2713,12 @@ admin_html = """<!DOCTYPE html>
             var itemsHtml = "";
             if (bill.items && bill.items.length > 0) {
                 bill.items.forEach(function(item) {
+                    var itemName = item.item_name || item.name || "";
+                    var itemPrice = item.price || (item.quantity ? item.total_price / item.quantity : 0);
                     itemsHtml += "<tr>" +
-                        "<td>" + item.item_name + "</td>" +
+                        "<td>" + itemName + "</td>" +
                         "<td style='text-align:center;'>" + item.quantity + "</td>" +
-                        "<td style='text-align:right;'>" + Math.ceil(item.price).toLocaleString("vi-VN") + "</td>" +
+                        "<td style='text-align:right;'>" + Math.ceil(itemPrice).toLocaleString("vi-VN") + "</td>" +
                         "<td style='text-align:right;'>" + Math.ceil(item.total_price).toLocaleString("vi-VN") + "</td>" +
                     "</tr>";
                 });
@@ -2616,8 +2726,8 @@ admin_html = """<!DOCTYPE html>
                 itemsHtml = "<tr><td colspan='4' style='text-align:center;'>Không gọi dịch vụ</td></tr>";
             }
             
-            var sTime = new Date(bill.start_time).toLocaleTimeString('vi-VN');
-            var eTime = bill.is_preview ? "--:--" : new Date(bill.end_time).toLocaleTimeString('vi-VN');
+            var sTime = new Date(bill.start_time).toLocaleString('vi-VN');
+            var eTime = bill.is_preview ? "--:--" : new Date(bill.end_time).toLocaleString('vi-VN');
             var printTime = new Date().toLocaleString('vi-VN');
             
             var html = "<html><head><title>In Hóa Đơn</title>" +
@@ -3409,8 +3519,6 @@ admin_html = """<!DOCTYPE html>
                 var wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
                 var wsUrl = wsProtocol + "//" + window.location.host + "/ws/admin";
                 
-                bannerText.textContent = "Đang mở WebSocket tới: " + wsUrl;
-                
                 var ws = new WebSocket(wsUrl);
                 
                 ws.onopen = function() {
@@ -3431,25 +3539,61 @@ admin_html = """<!DOCTYPE html>
                 };
                 
                 ws.onclose = function(e) {
-                    statusDot.className = "dot dot-red";
-                    statusLabel.textContent = "Mat ket noi";
-                    statusBanner.className = "status-banner status-error";
-                    bannerIcon.innerHTML = "&#9888;";
-                    bannerText.textContent = "Mất kết nối (" + e.code + "). Đang thử lại...";
+                    if (statusBanner.className.indexOf("status-connected") === -1) {
+                        statusDot.className = "dot dot-red";
+                        statusLabel.textContent = "Mat ket noi";
+                        statusBanner.className = "status-banner status-error";
+                        bannerIcon.innerHTML = "&#9888;";
+                        bannerText.textContent = "Mất kết nối (" + e.code + "). Đang thử lại hoặc dùng HTTP Polling...";
+                    }
                     setTimeout(connectWebSocket, 3000);
                 };
                 
                 ws.onerror = function(err) {
-                    statusDot.className = "dot dot-red";
-                    statusBanner.className = "status-banner status-error";
-                    bannerText.textContent = "Lỗi đường truyền WebSocket. Vui lòng F5!";
+                    if (statusBanner.className.indexOf("status-connected") === -1) {
+                        statusDot.className = "dot dot-red";
+                        statusBanner.className = "status-banner status-error";
+                        bannerText.textContent = "Lỗi đường truyền WebSocket. Đang dùng HTTP Polling thay thế!";
+                    }
                 };
             } catch(ex) {
                 bannerText.textContent = "JS Error: " + ex.message;
             }
         }
 
+        function startPollingEvents() {
+            function doPoll() {
+                var xhr = new XMLHttpRequest();
+                xhr.open("GET", "/api/poll?_" + Date.now(), true);
+                xhr.onload = function() {
+                    if (xhr.status === 200) {
+                        try {
+                            var res = JSON.parse(xhr.responseText);
+                            if (res && res.status === "ok") {
+                                if (statusBanner.className.indexOf("status-connected") === -1) {
+                                    statusDot.className = "dot dot-green";
+                                    statusLabel.textContent = "Dang hoat dong";
+                                    statusBanner.className = "status-banner status-connected";
+                                    bannerIcon.innerHTML = "&#10004;";
+                                    bannerText.textContent = "He thong dang hoat dong - AI Camera dang giam sat (HTTP Polling)";
+                                }
+                                if (res.events && res.events.length > 0) {
+                                    for (var i = 0; i < res.events.length; i++) {
+                                        renderEvent(res.events[i]);
+                                    }
+                                }
+                            }
+                        } catch(e) {}
+                    }
+                };
+                xhr.send();
+            }
+            doPoll();
+            setInterval(doPoll, 2000);
+        }
+
         connectWebSocket();
+        startPollingEvents();
 
         // === HIGHLIGHT CLIP FUNCTIONS ===
         var clipStatusDiv = document.getElementById("clip-status");
