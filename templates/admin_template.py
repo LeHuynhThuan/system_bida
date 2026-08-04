@@ -1743,10 +1743,28 @@ admin_html = """<!DOCTYPE html>
 
             <!-- TAB: REVENUE -->
             <div id="tab-content-revenue" style="display: none;">
+                <!-- Filter Bar -->
+                <div style="background: rgba(255,255,255,0.04); padding: 12px 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); margin-bottom: 14px; display: flex; flex-direction: column; gap: 10px;">
+                    <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                        <span style="font-size: 13px; font-weight: 700; color: #a5b4fc;">Lọc theo mốc:</span>
+                        <button id="rev-preset-today" onclick="setAdminRevPreset('today')" style="padding: 5px 12px; border-radius: 6px; border: none; background: #6366f1; color: white; font-weight: bold; font-size: 12px; cursor: pointer;">Hôm nay</button>
+                        <button id="rev-preset-week" onclick="setAdminRevPreset('week')" style="padding: 5px 12px; border-radius: 6px; border: none; background: rgba(255,255,255,0.1); color: #cbd5e1; font-weight: bold; font-size: 12px; cursor: pointer;">Tuần này</button>
+                        <button id="rev-preset-month" onclick="setAdminRevPreset('month')" style="padding: 5px 12px; border-radius: 6px; border: none; background: rgba(255,255,255,0.1); color: #cbd5e1; font-weight: bold; font-size: 12px; cursor: pointer;">Tháng này</button>
+                        <button id="rev-preset-year" onclick="setAdminRevPreset('year')" style="padding: 5px 12px; border-radius: 6px; border: none; background: rgba(255,255,255,0.1); color: #cbd5e1; font-weight: bold; font-size: 12px; cursor: pointer;">Năm nay</button>
+                    </div>
+                    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 10px;">
+                        <span style="font-size: 12px; color: #cbd5e1; font-weight: 600;">Từ ngày:</span>
+                        <input type="date" id="admin-rev-start-date" style="height: 32px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: white; padding: 0 8px; font-size: 12px; color-scheme: dark;">
+                        <span style="font-size: 12px; color: #cbd5e1; font-weight: 600;">Đến ngày:</span>
+                        <input type="date" id="admin-rev-end-date" style="height: 32px; background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.15); border-radius: 6px; color: white; padding: 0 8px; font-size: 12px; color-scheme: dark;">
+                        <button onclick="filterAdminRevCustom()" style="padding: 6px 14px; border-radius: 6px; border: none; background: linear-gradient(135deg, #10b981, #059669); color: white; font-weight: bold; font-size: 12px; cursor: pointer;">🔍 Lọc ngày</button>
+                    </div>
+                </div>
+
                 <div id="admin-revenue-summary"></div>
                 <div style="font-size: 13px; color: #d1d5db; margin-top: 10px;">
-                    <div style="font-weight: 700; color: #fbbf24; margin-bottom: 8px;">Chi tiết hóa đơn lượt chơi hôm nay:</div>
-                    <div style="max-height: 280px; overflow-y: auto; background: rgba(0,0,0,0.25); border-radius: 12px; border: 1px solid rgba(255,255,255,0.06);">
+                    <div style="font-weight: 700; color: #fbbf24; margin-bottom: 8px;" id="admin-revenue-list-title">Chi tiết hóa đơn lượt chơi:</div>
+                    <div style="max-height: 240px; overflow-y: auto; background: rgba(0,0,0,0.25); border-radius: 12px; border: 1px solid rgba(255,255,255,0.06);">
                         <table style="width: 100%; border-collapse: collapse; font-size: 12px; text-align: left;">
                             <thead>
                                 <tr style="border-bottom: 1px solid rgba(255,255,255,0.15); color: #a5b4fc; font-weight: 700;">
@@ -3603,6 +3621,43 @@ admin_html = """<!DOCTYPE html>
             }
         }
 
+        var currentAdminRevFilter = { preset: 'today', start_date: '', end_date: '' };
+
+        function setAdminRevPreset(preset) {
+            currentAdminRevFilter.preset = preset;
+            currentAdminRevFilter.start_date = '';
+            currentAdminRevFilter.end_date = '';
+            
+            var presets = ['today', 'week', 'month', 'year'];
+            presets.forEach(function(p) {
+                var btn = document.getElementById('rev-preset-' + p);
+                if (btn) {
+                    btn.style.background = p === preset ? '#6366f1' : 'rgba(255,255,255,0.1)';
+                    btn.style.color = p === preset ? 'white' : '#cbd5e1';
+                }
+            });
+            loadAdminStoreRevenue();
+        }
+
+        function filterAdminRevCustom() {
+            var startVal = document.getElementById("admin-rev-start-date").value;
+            var endVal = document.getElementById("admin-rev-end-date").value;
+            
+            currentAdminRevFilter.preset = '';
+            currentAdminRevFilter.start_date = startVal;
+            currentAdminRevFilter.end_date = endVal;
+            
+            var presets = ['today', 'week', 'month', 'year'];
+            presets.forEach(function(p) {
+                var btn = document.getElementById('rev-preset-' + p);
+                if (btn) {
+                    btn.style.background = 'rgba(255,255,255,0.1)';
+                    btn.style.color = '#cbd5e1';
+                }
+            });
+            loadAdminStoreRevenue();
+        }
+
         function loadAdminStoreRevenue() {
             var container = document.getElementById("admin-revenue-body");
             if (!container) return;
@@ -3610,8 +3665,17 @@ admin_html = """<!DOCTYPE html>
             
             var invSel = document.getElementById("inventory-store-select");
             var storeId = invSel && invSel.value ? invSel.value : "";
-            var url = "/api/reports/store-revenue?preset=today";
-            if (storeId) url += "&store_id=" + storeId;
+            
+            var url = "/api/reports/store-revenue?";
+            var params = [];
+            if (currentAdminRevFilter.preset) {
+                params.push("preset=" + currentAdminRevFilter.preset);
+            } else {
+                if (currentAdminRevFilter.start_date) params.push("start_date=" + currentAdminRevFilter.start_date);
+                if (currentAdminRevFilter.end_date) params.push("end_date=" + currentAdminRevFilter.end_date);
+            }
+            if (storeId) params.push("store_id=" + storeId);
+            url += params.join("&");
             
             var xhr = makeAuthXHR();
             xhr.open("GET", url, true);
@@ -3621,12 +3685,21 @@ admin_html = """<!DOCTYPE html>
                         var res = JSON.parse(xhr.responseText);
                         var data = res.data || {};
                         
+                        var labelText = "Hôm nay";
+                        if (currentAdminRevFilter.preset === 'week') labelText = "Tuần này";
+                        else if (currentAdminRevFilter.preset === 'month') labelText = "Tháng này";
+                        else if (currentAdminRevFilter.preset === 'year') labelText = "Năm nay";
+                        else if (data.start_date && data.end_date) labelText = "từ " + data.start_date + " đến " + data.end_date;
+                        
+                        var titleEl = document.getElementById("admin-revenue-list-title");
+                        if (titleEl) titleEl.textContent = "Chi tiết hóa đơn lượt chơi (" + labelText + "):";
+
                         var summaryEl = document.getElementById("admin-revenue-summary");
                         if (summaryEl) {
                             summaryEl.innerHTML =
                             "<div style='display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 12px;'>" +
                                 "<div style='background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px;'>" +
-                                    "<div style='font-size: 11px; color: #94a3b8;'>Doanh thu hôm nay</div>" +
+                                    "<div style='font-size: 11px; color: #94a3b8;'>Doanh thu (" + labelText + ")</div>" +
                                     "<div style='font-size: 18px; font-weight: 800; color: #34d399;'>" + formatMoneyFull(data.total_revenue || 0) + "</div>" +
                                 "</div>" +
                                 "<div style='background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px;'>" +
@@ -3646,7 +3719,7 @@ admin_html = """<!DOCTYPE html>
                         
                         var sessions = data.sessions || [];
                         if (sessions.length === 0) {
-                            container.innerHTML = "<tr><td colspan='6' style='text-align:center; padding:16px; color:#94a3b8;'>Hôm nay chưa có lượt chơi hoàn tất nào.</td></tr>";
+                            container.innerHTML = "<tr><td colspan='6' style='text-align:center; padding:16px; color:#94a3b8;'>Không có lượt chơi hoàn tất nào trong khoảng thời gian này.</td></tr>";
                             return;
                         }
                         
