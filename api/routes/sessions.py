@@ -6,12 +6,13 @@ import time
 import re
 import math
 from datetime import datetime
-from fastapi import APIRouter, Response
+from fastapi import APIRouter, Response, Depends
 from fastapi.responses import JSONResponse, StreamingResponse, FileResponse
 import redis as redis_lib
 from database.database import SessionLocal
 from database.models import BilliardTable, PlaySession, SessionOrderItem, Product
 from api.websocket_server import websocket_manager
+from api.middleware.store_context import StoreContext, get_store_context
 
 # Token generator helper
 import hashlib
@@ -25,7 +26,7 @@ client_messages_store = {}
 router = APIRouter(prefix="/api", tags=["Sessions & Orders"])
 
 @router.post("/customer-order/{table_id}/{token}")
-async def customer_order(table_id: int, token: str, payload: dict):
+def customer_order(table_id: int, token: str, payload: dict):
     if token != generate_table_token(table_id):
         return JSONResponse({"status": "error", "message": "Mã xác thực không hợp lệ. Vui lòng quét lại QR!"}, status_code=403)
         
@@ -108,6 +109,7 @@ async def customer_order(table_id: int, token: str, payload: dict):
         event_data = {
             "id": f"evt_{time.time()}",
             "table_id": table_id,
+            "store_id": table.store_id,
             "event_type": "CUSTOMER_ORDER",
             "message": message_text,
             "customer_phone": phone,
@@ -117,7 +119,7 @@ async def customer_order(table_id: int, token: str, payload: dict):
         }
         
         try:
-            await websocket_manager.broadcast(json.dumps(event_data))
+            websocket_manager.broadcast_sync(json.dumps(event_data), store_id=table.store_id)
         except Exception:
             pass
 
@@ -128,7 +130,7 @@ async def customer_order(table_id: int, token: str, payload: dict):
         db.close()
 
 @router.post("/session/start/{table_id}")
-async def start_session(table_id: int):
+def start_session(table_id: int):
     db = SessionLocal()
     try:
         table = db.query(BilliardTable).filter(BilliardTable.id == table_id).first()
@@ -138,7 +140,7 @@ async def start_session(table_id: int):
             return JSONResponse({"status": "error", "message": "Ban dang choi roi"}, status_code=400)
             
         table.current_status = "PLAYING"
-        new_session = PlaySession(table_id=table_id)
+        new_session = PlaySession(table_id=table_id, store_id=table.store_id)
         db.add(new_session)
         db.commit()
         return JSONResponse({"status": "ok", "message": "Da bat dau tinh gio ban", "session_id": new_session.id})
@@ -148,7 +150,7 @@ async def start_session(table_id: int):
         db.close()
 
 @router.post("/session/add-item/{table_id}")
-async def add_item_to_session(table_id: int, payload: dict):
+def add_item_to_session(table_id: int, payload: dict):
     item_name = payload.get("item_name", "").strip()
     quantity = int(payload.get("quantity", 1))
     price = float(payload.get("price", 0))
@@ -192,7 +194,7 @@ async def add_item_to_session(table_id: int, payload: dict):
         db.close()
 
 @router.post("/session/add-items/{table_id}")
-async def add_items_to_session(table_id: int, payload: dict):
+def add_items_to_session(table_id: int, payload: dict):
     items = payload.get("items", [])
     
     if not items or len(items) == 0:
@@ -256,7 +258,7 @@ async def add_items_to_session(table_id: int, payload: dict):
             "items": items
         }
         try:
-            await websocket_manager.broadcast(json.dumps(event_data))
+            websocket_manager.broadcast(json.dumps(event_data))
         except Exception:
             pass
 
@@ -267,7 +269,7 @@ async def add_items_to_session(table_id: int, payload: dict):
         db.close()
 
 @router.delete("/session/item/{item_id}")
-async def delete_session_item(item_id: int):
+def delete_session_item(item_id: int):
     db = SessionLocal()
     try:
         item = db.query(SessionOrderItem).filter(SessionOrderItem.id == item_id).first()
@@ -290,7 +292,7 @@ async def delete_session_item(item_id: int):
                 "event_type": "BILL_ITEM_UPDATED",
                 "message": f"Thu ngân đã xóa món '{item_name}' khỏi hóa đơn."
             }
-            await websocket_manager.broadcast(json.dumps(event_data))
+            websocket_manager.broadcast(json.dumps(event_data))
         except Exception:
             pass
             
@@ -301,7 +303,7 @@ async def delete_session_item(item_id: int):
         db.close()
 
 @router.post("/session/item/{item_id}/update")
-async def update_session_item(item_id: int, payload: dict):
+def update_session_item(item_id: int, payload: dict):
     new_qty = int(payload.get("quantity", 0))
     db = SessionLocal()
     try:
@@ -332,7 +334,7 @@ async def update_session_item(item_id: int, payload: dict):
                 "event_type": "BILL_ITEM_UPDATED",
                 "message": msg
             }
-            await websocket_manager.broadcast(json.dumps(event_data))
+            websocket_manager.broadcast(json.dumps(event_data))
         except Exception:
             pass
             
@@ -343,7 +345,7 @@ async def update_session_item(item_id: int, payload: dict):
         db.close()
 
 @router.post("/session/stop/{table_id}")
-async def stop_session(table_id: int):
+def stop_session(table_id: int):
     db = SessionLocal()
     try:
         table = db.query(BilliardTable).filter(BilliardTable.id == table_id).first()
@@ -365,17 +367,20 @@ async def stop_session(table_id: int):
         
         play_fee = math.ceil((total_minutes / 60.0) * table.price_per_hour)
         
+        items = db.query(SessionOrderItem).filter(SessionOrderItem.session_id == active_session.id).all()
+        service_total = sum(i.total_price for i in items)
+        total_bill = play_fee + service_total
+        
         active_session.end_time = end_time
         active_session.total_minutes = total_minutes
         active_session.play_fee = play_fee
+        active_session.services_fee = service_total
+        active_session.total_amount = total_bill
+        active_session.store_id = table.store_id
         active_session.status = "COMPLETED"
         
         table.current_status = "EMPTY"
         db.commit()
-        
-        items = db.query(SessionOrderItem).filter(SessionOrderItem.session_id == active_session.id).all()
-        service_total = sum(i.total_price for i in items)
-        total_bill = play_fee + service_total
         
         return JSONResponse({
             "status": "ok",
@@ -398,7 +403,7 @@ async def stop_session(table_id: int):
         db.close()
 
 @router.post("/client-notify/{table_id}")
-async def notify_client(table_id: int, payload: dict):
+def notify_client(table_id: int, payload: dict):
     message = payload.get("message", "")
     msg_type = payload.get("type", "info")
     redirect_url = payload.get("redirect_url", "")
@@ -419,7 +424,7 @@ async def notify_client(table_id: int, payload: dict):
     return JSONResponse({"status": "ok"})
 
 @router.get("/client-poll/{table_id}")
-async def poll_client(table_id: int):
+def poll_client(table_id: int):
     data = None
     if table_id in client_messages_store:
         data = client_messages_store.pop(table_id)
@@ -440,7 +445,7 @@ async def poll_client(table_id: int):
     return JSONResponse({"has_message": False})
 
 @router.post("/session/transfer/{from_table_id}/{to_table_id}")
-async def transfer_session(from_table_id: int, to_table_id: int):
+def transfer_session(from_table_id: int, to_table_id: int):
     db = SessionLocal()
     try:
         if from_table_id == to_table_id:
@@ -500,7 +505,7 @@ async def transfer_session(from_table_id: int, to_table_id: int):
         db.close()
 
 @router.get("/poll")
-async def poll_events():
+def poll_events():
     try:
         if websocket_manager.latest_payload and websocket_manager.latest_payload != "{}":
             data = json.loads(websocket_manager.latest_payload)
@@ -512,11 +517,15 @@ async def poll_events():
     return JSONResponse({"status": "ok", "events": events})
 
 @router.get("/history")
-async def get_history():
+def get_history(store_id: int = None, ctx: StoreContext = Depends(get_store_context)):
     db = SessionLocal()
     try:
         now = datetime.utcnow()
-        sessions = db.query(PlaySession).filter(PlaySession.status == "COMPLETED").order_by(PlaySession.end_time.desc()).all()
+        target = store_id if (ctx.role.value == 'SUPER_ADMIN' and store_id) else ctx.store_id
+        if target:
+            sessions = db.query(PlaySession).filter(PlaySession.status == "COMPLETED", PlaySession.store_id == target).order_by(PlaySession.end_time.desc()).all()
+        else:
+            sessions = db.query(PlaySession).filter(PlaySession.status == "COMPLETED").order_by(PlaySession.end_time.desc()).all()
         
         result = []
         for s in sessions:
@@ -550,7 +559,7 @@ async def get_history():
         db.close()
 
 @router.delete("/history")
-async def delete_history(payload: dict):
+def delete_history(payload: dict):
     ids = payload.get("ids", [])
     if not ids:
         return JSONResponse({"status": "error", "message": "Không có hóa đơn nào được chọn"}, status_code=400)

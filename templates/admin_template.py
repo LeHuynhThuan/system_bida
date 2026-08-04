@@ -1184,8 +1184,8 @@ admin_html = """<!DOCTYPE html>
             <button class="menu-toggle-btn" id="menu-btn" onclick="toggleSidebar()">☰</button>
             <div class="logo-icon">8</div>
             <div>
-                <div class="header-title">Bida Club</div>
-                <div class="header-sub">Đẳng cấp từng cú cơ</div>
+                <div class="header-title" id="nav-header-title">Bida Club</div>
+                <div class="header-sub" id="nav-header-sub">Đẳng cấp từng cú cơ</div>
                 <div style="font-size: 11px; color: #8b949e; margin-top: 4px;">📍 3xx Huỳnh Tấn Phát quận 7 HCM &nbsp;|&nbsp; 📞 0396123456</div>
             </div>
         </div>
@@ -1198,10 +1198,16 @@ admin_html = """<!DOCTYPE html>
                 <div class="stat-chip">
                     <span id="event-count">0</span> su kien
                 </div>
+                <div class="stat-chip" id="role-badge-display" style="font-weight:bold; background:#334155; color:#f8fafc;">
+                    👤 Đang kiểm tra...
+                </div>
                 <div id="clock">--:--:--</div>
             </div>
             <button class="sound-toggle" id="sound-btn" onclick="toggleSound()">
                 <span id="sound-icon">&#128264;</span> Am thanh
+            </button>
+            <button class="sound-toggle" onclick="logout()" style="background:#ef4444; border-color:#b91c1c; margin-left:8px;">
+                <span>🔒</span> Đăng xuất
             </button>
         </div>
     </div>
@@ -1308,12 +1314,127 @@ admin_html = """<!DOCTYPE html>
 
                     <!-- RIGHT COLUMN: REALTIME ALERTS LOG -->
                     <div class="dashboard-col">
-                        <div class="section-label">Canh bao realtime</div>
-                        <div id="events">
-                            <div class="empty-state" id="empty-state">
-                                <div class="empty-icon">&#128247;</div>
-                                <div class="empty-text">Chua co su kien nao</div>
-                                <div class="empty-sub">He thong dang cho AI Camera gui du lieu...</div>
+                        <!-- HQ OVERVIEW DASHBOARD PANEL (Chi hien thi cho SUPER_ADMIN) -->
+                        <div id="hq-revenue-panel" style="display: none; margin-bottom: 24px; font-family: system-ui, -apple-system, sans-serif;">
+                            
+                            <!-- Header Banner -->
+                            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px 20px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                                <div style="display: flex; align-items: center; gap: 14px;">
+                                    <div style="width: 44px; height: 44px; background: #eff6ff; color: #2563eb; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 22px;">🏪</div>
+                                    <div>
+                                        <div style="font-size: 18px; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 8px;">
+                                            <span>Bida Chain — HQ</span>
+                                        </div>
+                                        <div style="font-size: 13px; color: #64748b; margin-top: 2px;">
+                                            Tong quan toan he thong · <span id="hq-store-count-label">3 chi nhanh</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <span style="font-size: 12px; color: #15803d; background: #f0fdf4; border: 1px solid #bbf7d0; padding: 6px 12px; border-radius: 20px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px;">
+                                        <span style="width: 8px; height: 8px; background: #22c55e; border-radius: 50%; display: inline-block;"></span>
+                                        <span id="hq-sync-status">Dong bo 2 phut truo'c</span>
+                                    </span>
+                                    <span style="font-size: 12px; color: #475569; background: #f1f5f9; border: 1px solid #cbd5e1; padding: 6px 12px; border-radius: 20px; font-weight: 600;">
+                                        🔒 Che do chi xem
+                                    </span>
+                                    <button onclick="loadHQOverviewData()" style="background: #2563eb; color: white; border: none; padding: 7px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                                        🔄 Lam moi
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- 4 Metric Cards Grid -->
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 20px;">
+                                
+                                <!-- Card 1: Doanh thu hom nay -->
+                                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                                    <div style="font-size: 13px; color: #64748b; font-weight: 500; margin-bottom: 8px;">Doanh thu hom nay</div>
+                                    <div id="hq-card-today-rev" style="font-size: 26px; font-weight: 800; color: #0f172a; letter-spacing: -0.5px;">0 ₫</div>
+                                    <div style="margin-top: 8px; font-size: 12px;">
+                                        <span id="hq-card-today-badge" style="color: #15803d; font-weight: 700; background: #f0fdf4; padding: 2px 6px; border-radius: 4px;">+8% so vo'i hom qua</span>
+                                    </div>
+                                </div>
+
+                                <!-- Card 2: Doanh thu thang nay -->
+                                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                                    <div style="font-size: 13px; color: #64748b; font-weight: 500; margin-bottom: 8px;">Doanh thu thang nay</div>
+                                    <div id="hq-card-month-rev" style="font-size: 26px; font-weight: 800; color: #0f172a; letter-spacing: -0.5px;">0 ₫</div>
+                                    <div style="margin-top: 8px; font-size: 12px;">
+                                        <span id="hq-card-month-badge" style="color: #15803d; font-weight: 700; background: #f0fdf4; padding: 2px 6px; border-radius: 4px;">+12% so vo'i thang truo'c</span>
+                                    </div>
+                                </div>
+
+                                <!-- Card 3: Chi nhanh hoat dong -->
+                                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                                    <div style="font-size: 13px; color: #64748b; font-weight: 500; margin-bottom: 8px;">Chi nhanh hoat dong</div>
+                                    <div id="hq-card-active-stores" style="font-size: 26px; font-weight: 800; color: #0f172a; letter-spacing: -0.5px;">3 / 3</div>
+                                    <div style="margin-top: 8px; font-size: 12px; color: #15803d; font-weight: 600;" id="hq-card-stores-sub">Tat ca dang online</div>
+                                </div>
+
+                                <!-- Card 4: Ban dang choi -->
+                                <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                                    <div style="font-size: 13px; color: #64748b; font-weight: 500; margin-bottom: 8px;">Ban dang choi</div>
+                                    <div id="hq-card-tables-playing" style="font-size: 26px; font-weight: 800; color: #0f172a; letter-spacing: -0.5px;">0 / 0</div>
+                                    <div style="margin-top: 8px; font-size: 12px; color: #64748b;">Toan he thong</div>
+                                </div>
+
+                            </div>
+
+                            <!-- Section 1: Doanh thu theo chi nhanh — hom nay -->
+                            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                                <div style="font-size: 15px; font-weight: 700; color: #0f172a; margin-bottom: 16px;">
+                                    Doanh thu theo chi nhanh — hom nay
+                                </div>
+                                <div id="hq-bars-container" style="display: flex; flex-direction: column; gap: 14px;">
+                                    <div style="color: #64748b; font-size: 13px;">Dang tai du lieu doanh thu...</div>
+                                </div>
+                            </div>
+
+                            <!-- Section 2: Danh sach chi nhanh -->
+                            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                                <div style="font-size: 15px; font-weight: 700; color: #0f172a; margin-bottom: 16px;">
+                                    Danh sach chi nhanh
+                                </div>
+                                <div style="overflow-x: auto;">
+                                    <table style="width: 100%; border-collapse: collapse; font-size: 13px; text-align: left;">
+                                        <thead>
+                                            <tr style="color: #64748b; border-bottom: 1px solid #e2e8f0;">
+                                                <th style="padding: 10px 8px; font-weight: 600;">Chi nhanh</th>
+                                                <th style="padding: 10px 8px; font-weight: 600;">Ban hoat dong</th>
+                                                <th style="padding: 10px 8px; font-weight: 600;">Doanh thu hom nay</th>
+                                                <th style="padding: 10px 8px; font-weight: 600;">Trang thai</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="hq-branch-table-body">
+                                            <tr><td colspan="4" style="color: #64748b; padding: 12px;">Dang tai danh sach chi nhanh...</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- Action Buttons Bottom -->
+                            <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                                <button onclick="openInventoryModal()" style="background: #ffffff; border: 1px solid #cbd5e1; color: #1e293b; padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                                    🔍 Xem chi tiet chi nhanh
+                                </button>
+                                <button onclick="exportHQReportCSV()" style="background: #ffffff; border: 1px solid #cbd5e1; color: #1e293b; padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                                    📥 Xuat bao cao
+                                </button>
+                                <button onclick="alert('He thong dang mo rong. Lien he ky thuat de cap phat chi nhanh moi!')" style="background: #ffffff; border: 1px solid #cbd5e1; color: #1e293b; padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                                    ➕ Them chi nhanh
+                                </button>
+                            </div>
+
+                        </div>
+                        <div id="realtime-alerts-container">
+                            <div class="section-label">Canh bao realtime</div>
+                            <div id="events">
+                                <div class="empty-state" id="empty-state">
+                                    <div class="empty-icon">&#128247;</div>
+                                    <div class="empty-text">Chua co su kien nao</div>
+                                    <div class="empty-sub">He thong dang cho AI Camera gui du lieu...</div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1380,6 +1501,12 @@ admin_html = """<!DOCTYPE html>
                     <label style="font-size: 13px; font-weight: 600; color: #a5b4fc; display: block; margin-bottom: 4px;">Đến ngày:</label>
                     <input type="date" id="report-end-date" style="width: 100%; height: 40px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white; padding: 0 12px; font-size: 14px; outline: none; color-scheme: dark;">
                 </div>
+                <div id="report-store-container" style="display: none;">
+                    <label style="font-size: 13px; font-weight: 600; color: #a5b4fc; display: block; margin-bottom: 4px;">Chi nhánh:</label>
+                    <select id="report-store-select" style="width: 100%; height: 40px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white; padding: 0 12px; font-size: 14px; outline: none;">
+                        <option value="">Tất cả chi nhánh</option>
+                    </select>
+                </div>
             </div>
             
             <button onclick="downloadRevenueReport()" style="margin-top: 8px; height: 44px; border-radius: 8px; border: none; background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; font-weight: bold; font-size: 15px; cursor: pointer; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">📥 Tải file Excel (.csv)</button>
@@ -1396,9 +1523,54 @@ admin_html = """<!DOCTYPE html>
                 <span style="cursor: pointer; color: #9ca3af; font-size: 20px; font-weight: bold; padding: 4px;" onclick="closeHistoryModal()">✕</span>
             </div>
             
-            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: #d1d5db; margin-bottom: 8px;">
+            <!-- DATE RANGE FILTER BAR (Store Manager & Admin Revenue Report) -->
+            <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 10px;">
+                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                    <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #c4b5fd; font-weight: 600;">
+                        <span>Từ ngày:</span>
+                        <input type="date" id="hist-start-date" style="background: rgba(0,0,0,0.5); border: 1px solid rgba(165,180,252,0.4); color: white; border-radius: 6px; padding: 4px 8px; font-size: 12px; outline: none;">
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #c4b5fd; font-weight: 600;">
+                        <span>Đến ngày:</span>
+                        <input type="date" id="hist-end-date" style="background: rgba(0,0,0,0.5); border: 1px solid rgba(165,180,252,0.4); color: white; border-radius: 6px; padding: 4px 8px; font-size: 12px; outline: none;">
+                    </div>
+                    <button onclick="filterHistoryByDate()" style="background: linear-gradient(90deg, #6366f1, #8b5cf6); color: white; border: none; padding: 6px 16px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer;">
+                        🔍 Lọc doanh thu
+                    </button>
+                </div>
+                <!-- Quick Preset Filter Buttons -->
+                <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                    <span style="font-size: 11px; color: #9ca3af;">Lọc nhanh:</span>
+                    <button onclick="setHistPreset('today')" style="background: rgba(99,102,241,0.2); border: 1px solid rgba(99,102,241,0.4); color: #a5b4fc; padding: 3px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; font-weight: 600;">Hôm nay</button>
+                    <button onclick="setHistPreset('week')" style="background: rgba(99,102,241,0.2); border: 1px solid rgba(99,102,241,0.4); color: #a5b4fc; padding: 3px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; font-weight: 600;">Tuần này</button>
+                    <button onclick="setHistPreset('month')" style="background: rgba(99,102,241,0.2); border: 1px solid rgba(99,102,241,0.4); color: #a5b4fc; padding: 3px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; font-weight: 600;">Tháng này</button>
+                    <button onclick="setHistPreset('year')" style="background: rgba(99,102,241,0.2); border: 1px solid rgba(99,102,241,0.4); color: #a5b4fc; padding: 3px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; font-weight: 600;">Năm nay</button>
+                </div>
+            </div>
+
+            <!-- Revenue Summary Banner -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; font-size: 12px;">
+                <div style="background: rgba(255,255,255,0.05); padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);">
+                    <div style="color: #9ca3af; font-size: 10px;">Tiền giờ</div>
+                    <div id="hist-sum-play" style="font-weight: 700; color: #a5b4fc; font-size: 14px; margin-top: 2px;">0 ₫</div>
+                </div>
+                <div style="background: rgba(255,255,255,0.05); padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);">
+                    <div style="color: #9ca3af; font-size: 10px;">Tiền dịch vụ</div>
+                    <div id="hist-sum-service" style="font-weight: 700; color: #a5b4fc; font-size: 14px; margin-top: 2px;">0 ₫</div>
+                </div>
+                <div style="background: rgba(34,197,94,0.1); padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(34,197,94,0.3);">
+                    <div style="color: #4ade80; font-size: 10px; font-weight: 600;">TỔNG DOANH THU</div>
+                    <div id="hist-sum-total" style="font-weight: 800; color: #4ade80; font-size: 15px; margin-top: 2px;">0 ₫</div>
+                </div>
+                <div style="background: rgba(255,255,255,0.05); padding: 8px 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);">
+                    <div style="color: #9ca3af; font-size: 10px;">Số lượt chơi</div>
+                    <div id="hist-sum-count" style="font-weight: 700; color: #fbbf24; font-size: 14px; margin-top: 2px;">0 lượt</div>
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #9ca3af;">
                 <span>* Chỉ có thể xóa các phiên chơi có thời gian kết thúc quá 48 giờ.</span>
-                <button onclick="deleteSelectedHistory()" id="btn-delete-history" style="padding: 8px 16px; border-radius: 8px; border: none; background: #ef4444; color: white; font-weight: bold; cursor: pointer; transition: background 0.2s; opacity: 0.5;" disabled>🗑️ Xóa đã chọn</button>
+                <button onclick="deleteSelectedHistory()" id="btn-delete-history" style="padding: 6px 14px; border-radius: 6px; border: none; background: #ef4444; color: white; font-weight: bold; cursor: pointer; transition: background 0.2s; opacity: 0.5;" disabled>🗑️ Xóa đã chọn</button>
             </div>
 
             <div style="max-height: 400px; overflow-y: auto; background: rgba(0,0,0,0.25); border-radius: 12px; border: 1px solid rgba(255,255,255,0.06);">
@@ -1440,10 +1612,15 @@ admin_html = """<!DOCTYPE html>
                 <button id="tab-btn-tables" onclick="switchInventoryTab('tables')" style="padding: 8px 16px; border-radius: 8px; border: none; background: transparent; color: #9ca3af; font-weight: bold; cursor: pointer;">🎱 Quản lý Bàn Bida</button>
             </div>
 
+            <div id="inventory-store-container" style="display: none; margin-bottom: 16px; background: rgba(30,41,59,0.8); padding: 12px; border-radius: 8px; border: 1px solid #f59e0b;">
+                <label style="font-size: 13px; font-weight: bold; color: #fbbf24; margin-right: 8px;">🏢 Chọn Chi Nhánh (HQ View):</label>
+                <select id="inventory-store-select" onchange="onInventoryStoreChange()" style="height: 36px; background: rgba(0,0,0,0.5); border: 1px solid #f59e0b; color: white; border-radius: 6px; padding: 0 12px; font-size: 13px; font-weight: bold; outline: none;"></select>
+            </div>
+
             <!-- TAB: PRODUCTS -->
             <div id="tab-content-products">
                 <!-- Form thêm sản phẩm mới -->
-                <div style="background: rgba(255,255,255,0.04); padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; gap: 10px;">
+                <div id="form-add-product-container" style="background: rgba(255,255,255,0.04); padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; gap: 10px;">
                     <div style="font-weight: 700; color: #a5b4fc; font-size: 14px;">➕ Thêm sản phẩm mới</div>
                     <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 8px;">
                         <input type="text" id="new-prod-name" placeholder="Tên sản phẩm (Sting dâu...)" style="height: 38px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white; padding: 0 10px; font-size: 13px; outline: none;">
@@ -1497,7 +1674,7 @@ admin_html = """<!DOCTYPE html>
             <!-- TAB: TABLES -->
             <div id="tab-content-tables" style="display: none;">
                 <!-- Form thêm bàn mới -->
-                <div style="background: rgba(255,255,255,0.04); padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; gap: 10px;">
+                <div id="form-add-table-container" style="background: rgba(255,255,255,0.04); padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column; gap: 10px;">
                     <div style="font-weight: 700; color: #a5b4fc; font-size: 14px;">➕ Thêm Bàn Bida Mới</div>
                     <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 8px;">
                         <input type="text" id="new-table-name" placeholder="Tên bàn (VD: Bàn 5 Bida Lỗ)" style="height: 38px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white; padding: 0 10px; font-size: 13px; outline: none;">
@@ -1710,6 +1887,37 @@ admin_html = """<!DOCTYPE html>
     </div>
 
     <script>
+        (function() {
+            var originalOpen = XMLHttpRequest.prototype.open;
+            var originalSend = XMLHttpRequest.prototype.send;
+            var originalSetHeader = XMLHttpRequest.prototype.setRequestHeader;
+            XMLHttpRequest.prototype.open = function(method, url) {
+                this._url = url;
+                this._hasAuthHeader = false;
+                return originalOpen.apply(this, arguments);
+            };
+            XMLHttpRequest.prototype.setRequestHeader = function(header, value) {
+                if (header && header.toLowerCase() === 'authorization') {
+                    this._hasAuthHeader = true;
+                }
+                return originalSetHeader.apply(this, arguments);
+            };
+            XMLHttpRequest.prototype.send = function() {
+                var token = localStorage.getItem("jwt_token");
+                if (!this._hasAuthHeader && token && this._url && (this._url.indexOf('/api/') === 0 || this._url.indexOf('http') === 0)) {
+                    try {
+                        this.setRequestHeader("Authorization", "Bearer " + token);
+                    } catch(e) {}
+                }
+                var self = this;
+                this.addEventListener("load", function() {
+                    if (self.status === 401) {
+                        if (typeof showLoginModal === 'function') showLoginModal();
+                    }
+                });
+                return originalSend.apply(this, arguments);
+            };
+        })();
         window.onerror = function(msg, url, lineNo, columnNo, error) {
             var bannerText = document.getElementById("banner-text");
             var statusBanner = document.getElementById("status-banner");
@@ -1943,88 +2151,116 @@ admin_html = """<!DOCTYPE html>
         }
 
         var historyLocalData = [];
-        function loadHistory() {
-            var xhr = new XMLHttpRequest();
-            xhr.open('GET', '/api/history', true);
+        // ===== STORE MANAGER REVENUE REPORT & DATE FILTER =====
+        function setHistPreset(preset) {
+            var today = new Date();
+            var startEl = document.getElementById("hist-start-date");
+            var endEl = document.getElementById("hist-end-date");
+            if (!startEl || !endEl) return;
+
+            var fmt = function(d) {
+                var y = d.getFullYear();
+                var m = (d.getMonth() + 1).toString().padStart(2, "0");
+                var day = d.getDate().toString().padStart(2, "0");
+                return y + "-" + m + "-" + day;
+            };
+
+            endEl.value = fmt(today);
+
+            if (preset === "today" || preset === "day") {
+                startEl.value = fmt(today);
+            } else if (preset === "week") {
+                var dayOfWeek = today.getDay() || 7;
+                var monday = new Date(today);
+                monday.setDate(today.getDate() - dayOfWeek + 1);
+                startEl.value = fmt(monday);
+            } else if (preset === "month") {
+                var firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+                startEl.value = fmt(firstDay);
+            } else if (preset === "year") {
+                var firstDayYear = new Date(today.getFullYear(), 0, 1);
+                startEl.value = fmt(firstDayYear);
+            }
+            filterHistoryByDate();
+        }
+
+        function filterHistoryByDate() {
+            var startVal = (document.getElementById("hist-start-date") || {}).value || "";
+            var endVal = (document.getElementById("hist-end-date") || {}).value || "";
+            loadHistory(startVal, endVal);
+        }
+
+        function loadHistory(startDate, endDate) {
+            var url = "/api/reports/store-revenue";
+            var query = [];
+            if (startDate) query.push("start_date=" + startDate);
+            if (endDate) query.push("end_date=" + endDate);
+            
+            var storeSel = document.getElementById("inventory-store-select");
+            var role = localStorage.getItem("user_role");
+            if (role === "SUPER_ADMIN" && storeSel && storeSel.value) {
+                query.push("store_id=" + storeSel.value);
+            }
+
+            if (query.length > 0) {
+                url += "?" + query.join("&");
+            }
+
+            var xhr = makeAuthXHR();
+            xhr.open("GET", url, true);
             xhr.onload = function() {
                 if (xhr.status === 200) {
-                    historyLocalData = JSON.parse(xhr.responseText);
-                    var history = historyLocalData;
-                    var tbody = document.getElementById('history-items-body');
-                    tbody.innerHTML = '';
-                    history.forEach(function(h) {
-                        var canDeleteAttr = h.can_delete ? "data-candelete='true'" : "data-candelete='false' disabled";
-                        var chkHtml = '<input type="checkbox" class="chk-history" value="' + h.id + '" ' + canDeleteAttr + ' onchange="updateHistoryDeleteBtn()">';
+                    try {
+                        var res = JSON.parse(xhr.responseText);
+                        var data = res.data || {};
                         
-                        var tr = document.createElement('tr');
-                        tr.style.borderBottom = "1px solid rgba(255,255,255,0.06)";
-                        tr.innerHTML = `
-                            <td style="padding: 10px 8px; text-align: center;">${chkHtml}</td>
-                            <td style="padding: 10px 8px;">${h.table_name}</td>
-                            <td style="padding: 10px 8px;">${new Date(h.start_time).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 10px 8px;">${new Date(h.end_time).toLocaleString('vi-VN')}</td>
-                            <td style="padding: 10px 8px; text-align: right;">${h.total_minutes} phút</td>
-                            <td style="padding: 10px 8px; text-align: right; color: #86efac; font-weight: bold;">${h.total_bill.toLocaleString('vi-VN')} đ</td>
-                            <td style="padding: 10px 8px; text-align: center;">
-                                <button onclick="toggleHistoryDetail(${h.id})" style="padding: 4px 8px; background: rgba(99,102,241,0.2); border: 1px solid rgba(99,102,241,0.4); color: #a5b4fc; border-radius: 4px; cursor: pointer;">Chi tiết ⬇</button>
-                            </td>
-                        `;
-                        if (!h.can_delete) {
-                            tr.style.opacity = "0.6";
+                        // Update summary metrics banner
+                        var playEl = document.getElementById("hist-sum-play");
+                        if (playEl) playEl.textContent = formatMoneyFull(data.total_play_fee || 0);
+
+                        var svcEl = document.getElementById("hist-sum-service");
+                        if (svcEl) svcEl.textContent = formatMoneyFull(data.total_service_fee || 0);
+
+                        var totEl = document.getElementById("hist-sum-total");
+                        if (totEl) totEl.textContent = formatMoneyFull(data.total_revenue || 0);
+
+                        var countEl = document.getElementById("hist-sum-count");
+                        if (countEl) countEl.textContent = (data.session_count || 0) + " lượt";
+
+                        // Render history table
+                        var tbody = document.getElementById("history-items-body");
+                        if (!tbody) return;
+                        tbody.innerHTML = "";
+                        
+                        var sessions = data.sessions || [];
+                        if (sessions.length === 0) {
+                            tbody.innerHTML = "<tr><td colspan='7' style='text-align:center; padding:16px; color:#9ca3af;'>Không có dữ liệu hóa đơn trong khoảng thời gian này</td></tr>";
+                            return;
                         }
-                        
-                        var itemsHtml = h.items.map(function(item) {
-                            return `<tr><td style="padding: 4px 8px;">${item.item_name}</td><td style="padding: 4px 8px; text-align: center;">${item.quantity}</td><td style="padding: 4px 8px; text-align: right;">${item.total_price.toLocaleString('vi-VN')} đ</td></tr>`;
-                        }).join("");
-                        
-                        var detailTr = document.createElement('tr');
-                        detailTr.id = 'history-detail-' + h.id;
-                        detailTr.style.display = 'none';
-                        detailTr.innerHTML = `
-                            <td colspan="7" style="padding: 10px 24px; background: rgba(0,0,0,0.3); border-bottom: 1px solid rgba(255,255,255,0.06);">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                                    <div style="font-size: 11px; color: #9ca3af;">Tiền giờ: <b style="color: white;">${h.play_fee.toLocaleString('vi-VN')} đ</b></div>
-                                    <button onclick="printHistoryBill(${h.id})" style="padding: 4px 10px; background: linear-gradient(135deg, #10b981, #059669); border: none; color: white; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: 600;">🖨️ In lại hóa đơn</button>
-                                </div>
-                                <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
-                                    <tr style="color: #fbbf24; border-bottom: 1px dashed rgba(255,255,255,0.1);">
-                                        <th style="padding: 4px 8px; text-align: left;">Món ăn / Dịch vụ</th>
-                                        <th style="padding: 4px 8px;">SL</th>
-                                        <th style="padding: 4px 8px; text-align: right;">Thành tiền</th>
-                                    </tr>
-                                    ${itemsHtml || '<tr><td colspan="3" style="padding: 4px 8px; text-align: center; color: #6b7280;">Không gọi thêm món</td></tr>'}
-                                </table>
-                            </td>
-                        `;
-                        
-                        tbody.appendChild(tr);
-                        tbody.appendChild(detailTr);
-                    });
-                    updateHistoryDeleteBtn();
+
+                        var isSuper = localStorage.getItem("user_role") === "SUPER_ADMIN";
+                        sessions.forEach(function(h) {
+                            var chkHtml = '<input type="checkbox" class="chk-history" value="' + h.id + '" onchange="updateHistoryDeleteBtn()">';
+                            var storePrefix = h.store_id ? "<span style='background:#4f46e5; color:white; padding:1px 5px; border-radius:3px; font-size:10px; margin-right:4px;'>Quán " + h.store_id + "</span>" : "";
+                            
+                            var tr = document.createElement("tr");
+                            tr.style.borderBottom = "1px solid rgba(255,255,255,0.06)";
+                            tr.innerHTML = 
+                                "<td style='padding: 10px 8px; text-align: center;'>" + chkHtml + "</td>" +
+                                "<td style='padding: 10px 8px;'>" + storePrefix + h.table_name + "</td>" +
+                                "<td style='padding: 10px 8px; color:#d1d5db;'>" + (h.start_time ? new Date(h.start_time).toLocaleString("vi-VN") : "") + "</td>" +
+                                "<td style='padding: 10px 8px; color:#d1d5db;'>" + (h.end_time ? new Date(h.end_time).toLocaleString("vi-VN") : "") + "</td>" +
+                                "<td style='padding: 10px 8px; text-align: right; color:#a5b4fc;'>" + (h.total_minutes || 0) + " phút</td>" +
+                                "<td style='padding: 10px 8px; text-align: right; font-weight:700; color:#4ade80;'>" + (h.total_amount || 0).toLocaleString("vi-VN") + " ₫</td>" +
+                                "<td style='padding: 10px 8px; text-align: center;'><button onclick='viewSessionBill(" + h.id + ")' style='background:rgba(99,102,241,0.2); border:1px solid rgba(99,102,241,0.4); color:#a5b4fc; padding:2px 8px; border-radius:4px; font-size:11px; cursor:pointer;'>Chi tiết</button></td>";
+                            tbody.appendChild(tr);
+                        });
+                    } catch(e) {
+                        console.error("Lỗi parse history report:", e);
+                    }
                 }
             };
             xhr.send();
-        }
-
-        function toggleHistoryDetail(id) {
-            var tr = document.getElementById('history-detail-' + id);
-            if (tr) {
-                tr.style.display = tr.style.display === 'none' ? 'table-row' : 'none';
-            }
-        }
-
-        function printHistoryBill(id) {
-            var h = historyLocalData.find(function(item) { return item.id === id; });
-            if (!h) return;
-            showBillInvoice(h);
-        }
-
-        function toggleAllHistory(source) {
-            var checkboxes = document.querySelectorAll('.chk-history:not([disabled])');
-            for (var i = 0; i < checkboxes.length; i++) {
-                checkboxes[i].checked = source.checked;
-            }
-            updateHistoryDeleteBtn();
         }
 
         function updateHistoryDeleteBtn() {
@@ -2048,7 +2284,7 @@ admin_html = """<!DOCTYPE html>
             
             if (!confirm('Bạn có chắc chắn muốn xóa ' + ids.length + ' phiên chơi này? Hành động này không thể hoàn tác.')) return;
             
-            var xhr = new XMLHttpRequest();
+            var xhr = makeAuthXHR();
             xhr.open('DELETE', '/api/history', true);
             xhr.setRequestHeader('Content-Type', 'application/json');
             xhr.onload = function() {
@@ -2065,7 +2301,7 @@ admin_html = """<!DOCTYPE html>
 
         // === LOAD TABLES DATA ===
         function loadTables(callback) {
-            var xhr = new XMLHttpRequest();
+            var xhr = makeAuthXHR();
             xhr.open("GET", "/api/tables?_" + Date.now(), true);
             xhr.timeout = 8000; // Timeout 8 giay de tranh bi treo banner
             xhr.onload = function() {
@@ -2141,6 +2377,13 @@ admin_html = """<!DOCTYPE html>
                 return;
             }
             
+            filteredTables.sort(function(a, b) {
+                var stA = a.store_id || 1;
+                var stB = b.store_id || 1;
+                if (stA !== stB) return stA - stB;
+                return (a.id || 0) - (b.id || 0);
+            });
+            
             filteredTables.forEach(function(t) {
                 var card = document.createElement("div");
                 card.className = t.current_status === "PLAYING" ? "table-card playing" : "table-card";
@@ -2155,6 +2398,13 @@ admin_html = """<!DOCTYPE html>
                 
                 var badgesDiv = document.createElement("div");
                 badgesDiv.className = "table-badges";
+                
+                if (t.store_id || localStorage.getItem("user_role") === "SUPER_ADMIN") {
+                    var storeBadge = document.createElement("span");
+                    storeBadge.style.cssText = "background: #4f46e5; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-right: 4px;";
+                    storeBadge.textContent = "Quán " + (t.store_id || 1);
+                    badgesDiv.appendChild(storeBadge);
+                }
                 
                 var tierBadge = document.createElement("span");
                 tierBadge.className = t.table_tier === "VIP" ? "badge-vip" : "badge-std";
@@ -2325,7 +2575,7 @@ admin_html = """<!DOCTYPE html>
 
         // === START SESSION API ===
         function startSession(tableId) {
-            var xhr = new XMLHttpRequest();
+            var xhr = makeAuthXHR();
             xhr.open("POST", "/api/session/start/" + tableId, true);
             xhr.onload = function() {
                 if (xhr.status === 200) {
@@ -2404,7 +2654,7 @@ admin_html = """<!DOCTYPE html>
                 }
             }
             
-            var xhr = new XMLHttpRequest();
+            var xhr = makeAuthXHR();
             xhr.open("POST", "/api/client-notify/" + tableId, true);
             xhr.setRequestHeader("Content-Type", "application/json");
             xhr.onload = function() {
@@ -2434,7 +2684,7 @@ admin_html = """<!DOCTYPE html>
                 
                 if (emptyTables.length === 0) {
                     alert("Hiện tại không có bàn " + typeName + " nào trống để chuyển. Đã tự động báo cho khách!");
-                    var xhr = new XMLHttpRequest();
+                    var xhr = makeAuthXHR();
                     xhr.open("POST", "/api/client-notify/" + fromTableId, true);
                     xhr.setRequestHeader("Content-Type", "application/json");
                     xhr.send(JSON.stringify({ message: "Tạm thời hết bàn " + typeName + ", mong quý khách thông cảm!", type: "error" }));
@@ -2443,7 +2693,7 @@ admin_html = """<!DOCTYPE html>
             } else {
                 if (emptyTables.length === 0) {
                     alert("Hiện tại không có bàn nào trống để chuyển. Đã tự động báo cho khách!");
-                    var xhr = new XMLHttpRequest();
+                    var xhr = makeAuthXHR();
                     xhr.open("POST", "/api/client-notify/" + fromTableId, true);
                     xhr.setRequestHeader("Content-Type", "application/json");
                     xhr.send(JSON.stringify({ message: "Tạm thời hết bàn, mong quý khách thông cảm!", type: "error" }));
@@ -2485,7 +2735,7 @@ admin_html = """<!DOCTYPE html>
         }
         
         function transferTable(fromTableId, toTableId) {
-            var xhr = new XMLHttpRequest();
+            var xhr = makeAuthXHR();
             xhr.open("POST", "/api/session/transfer/" + fromTableId + "/" + toTableId, true);
             xhr.onload = function() {
                 if (xhr.status === 200) {
@@ -2511,7 +2761,7 @@ admin_html = """<!DOCTYPE html>
                 cancelButtonText: 'Hủy'
             }).then((result) => {
                 if (result.isConfirmed) {
-                    var xhr = new XMLHttpRequest();
+                    var xhr = makeAuthXHR();
                     xhr.open("POST", "/api/session/stop/" + tableId, true);
                     xhr.onload = function() {
                         if (xhr.status === 200) {
@@ -2621,7 +2871,7 @@ admin_html = """<!DOCTYPE html>
                     tr.style.borderBottom = "1px solid rgba(255,255,255,0.04)";
                     
                     var actionsHtml = "";
-                    if (bill.is_preview && item.id && bill.table_id) {
+                    if (bill.is_preview && item.id && bill.table_id && localStorage.getItem("user_role") !== "SUPER_ADMIN") {
                         var safeName = itemName.replace(/'/g, "\\'").replace(/"/g, '&quot;');
                         actionsHtml = 
                             "<span style='float:right; display:inline-flex; align-items:center; gap:4px; margin-left:8px;'>" +
@@ -2665,7 +2915,7 @@ admin_html = """<!DOCTYPE html>
             if (newQty <= 0) {
                 if (!confirm("Bạn có chắc muốn xóa món này khỏi hóa đơn?")) return;
             }
-            var xhr = new XMLHttpRequest();
+            var xhr = makeAuthXHR();
             xhr.open("POST", "/api/session/item/" + itemId + "/update", true);
             xhr.setRequestHeader("Content-Type", "application/json");
             xhr.onload = function() {
@@ -2687,7 +2937,7 @@ admin_html = """<!DOCTYPE html>
 
         function deleteBillItem(itemId, tableId, itemName) {
             if (!confirm("Bạn có chắc muốn xóa món '" + itemName + "' khỏi hóa đơn?")) return;
-            var xhr = new XMLHttpRequest();
+            var xhr = makeAuthXHR();
             xhr.open("DELETE", "/api/session/item/" + itemId, true);
             xhr.onload = function() {
                 if (xhr.status === 200) {
@@ -2729,6 +2979,7 @@ admin_html = """<!DOCTYPE html>
             var sTime = new Date(bill.start_time).toLocaleString('vi-VN');
             var eTime = bill.is_preview ? "--:--" : new Date(bill.end_time).toLocaleString('vi-VN');
             var printTime = new Date().toLocaleString('vi-VN');
+            var stId = bill.store_id || localStorage.getItem("store_id") || 1;
             
             var html = "<html><head><title>In Hóa Đơn</title>" +
                 "<style>" +
@@ -2748,6 +2999,7 @@ admin_html = """<!DOCTYPE html>
                 "</style></head><body>" +
                 "<div class='header'>" +
                 "<h2>BIDA CLUB</h2>" +
+                "<p style='font-weight:bold; font-size:14px; margin: 4px 0; color:#000;'>CƠ SỞ: QUÁN " + stId + "</p>" +
                 "<p>3xx Huỳnh Tấn Phát, Quận 7, HCM</p>" +
                 "<p>SĐT: 0396 123 456</p>" +
                 "<p>Mã hóa đơn: " + (bill.is_preview ? "Tạm Tính" : "HD-" + Date.now().toString().slice(-6)) + "</p>" +
@@ -2819,10 +3071,38 @@ admin_html = """<!DOCTYPE html>
         function openReportModal() {
             document.getElementById("report-modal").style.display = "flex";
             
-            // Set default date to today
             var today = new Date().toISOString().split('T')[0];
             document.getElementById("report-start-date").value = today;
             document.getElementById("report-end-date").value = today;
+            
+            var role = localStorage.getItem("user_role");
+            var container = document.getElementById("report-store-container");
+            if (role === "SUPER_ADMIN") {
+                if (container) container.style.display = "block";
+                var sel = document.getElementById("report-store-select");
+                if (sel && sel.options.length <= 1) {
+                    var xhr = makeAuthXHR();
+                    xhr.open("GET", "/api/stores", true);
+                    xhr.onreadystatechange = function() {
+                        if (xhr.readyState === 4 && xhr.status === 200) {
+                            try {
+                                var res = JSON.parse(xhr.responseText);
+                                if (res.data) {
+                                    res.data.forEach(function(s) {
+                                        var opt = document.createElement("option");
+                                        opt.value = s.id;
+                                        opt.textContent = s.name;
+                                        sel.appendChild(opt);
+                                    });
+                                }
+                            } catch(e) {}
+                        }
+                    };
+                    xhr.send();
+                }
+            } else {
+                if (container) container.style.display = "none";
+            }
         }
 
         function closeReportModal() {
@@ -2836,19 +3116,69 @@ admin_html = """<!DOCTYPE html>
             var params = [];
             if (startDate) params.push("start_date=" + startDate);
             if (endDate) params.push("end_date=" + endDate);
+            var storeVal = document.getElementById("report-store-select") ? document.getElementById("report-store-select").value : "";
+            if (storeVal) params.push("store_id=" + storeVal);
             
             if (params.length > 0) {
                 url += "?" + params.join("&");
             }
             
-            window.location.href = url;
+            var token = localStorage.getItem("jwt_token");
+            fetch(url, {
+                headers: token ? { "Authorization": "Bearer " + token } : {}
+            })
+            .then(function(res) { return res.blob(); })
+            .then(function(blob) {
+                var a = document.createElement("a");
+                a.href = URL.createObjectURL(blob);
+                a.download = "bao_cao_doanh_thu.csv";
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            });
             closeReportModal();
         }
 
         // === INVENTORY MANAGEMENT FUNCTIONS ===
+        function onInventoryStoreChange() {
+            var prodTab = document.getElementById('tab-content-products');
+            if (prodTab && prodTab.style.display !== 'none') {
+                loadInventoryList();
+            } else {
+                loadAdminTables();
+            }
+        }
+
         function openInventoryModal() {
             document.getElementById("inventory-modal").style.display = "flex";
-            loadInventoryList();
+            var role = localStorage.getItem("user_role");
+            var invSel = document.getElementById("inventory-store-select");
+            if (role === "SUPER_ADMIN" && invSel) {
+                invSel.parentElement.style.display = "block";
+                if (invSel.options.length === 0) {
+                    var xhrStores = makeAuthXHR();
+                    xhrStores.open("GET", "/api/stores", true);
+                    xhrStores.onload = function() {
+                        if (xhrStores.status === 200) {
+                            try {
+                                var res = JSON.parse(xhrStores.responseText);
+                                if (res.data) {
+                                    res.data.forEach(function(s) {
+                                        var opt = document.createElement("option");
+                                        opt.value = s.id;
+                                        opt.textContent = s.name;
+                                        invSel.appendChild(opt);
+                                    });
+                                    onInventoryStoreChange();
+                                }
+                            } catch(e) {}
+                        }
+                    };
+                    xhrStores.send();
+                    return;
+                }
+            }
+            onInventoryStoreChange();
         }
 
         function closeInventoryModal() {
@@ -2863,8 +3193,14 @@ admin_html = """<!DOCTYPE html>
         }
 
         function loadInventoryList() {
-            var xhr = new XMLHttpRequest();
-            xhr.open("GET", "/api/products", true);
+            var url = "/api/products";
+            var role = localStorage.getItem("user_role");
+            var invSel = document.getElementById("inventory-store-select");
+            if (role === "SUPER_ADMIN" && invSel && invSel.value) {
+                url += "?store_id=" + invSel.value;
+            }
+            var xhr = makeAuthXHR();
+            xhr.open("GET", url, true);
             xhr.onload = function() {
                 if (xhr.status === 200) {
                     var prods = JSON.parse(xhr.responseText);
@@ -2872,8 +3208,13 @@ admin_html = """<!DOCTYPE html>
                     var tbody = document.getElementById("inventory-items-body");
                     tbody.innerHTML = "";
                     
+                    var isSuper = localStorage.getItem("user_role") === "SUPER_ADMIN";
                     var master = document.getElementById("chk-all-prods");
-                    if (master) master.checked = false;
+                    if (master) {
+                        master.checked = false;
+                        master.disabled = isSuper;
+                        master.style.display = isSuper ? "none" : "";
+                    }
                     
                     if (prods.length === 0) {
                         tbody.innerHTML = "<tr><td colspan='7' style='color:#6b7280; padding:12px; text-align:center;'>Chưa có sản phẩm nào</td></tr>";
@@ -2883,17 +3224,28 @@ admin_html = """<!DOCTYPE html>
                     prods.forEach(function(p) {
                         var tr = document.createElement("tr");
                         tr.style.borderBottom = "1px solid rgba(255,255,255,0.04)";
-                        tr.innerHTML = 
-                            "<td style='padding: 10px 8px; text-align:center;'><input type='checkbox' class='chk-prod' value='" + p.id + "'></td>" +
-                            "<td style='padding: 10px 8px; font-weight:600; color:white;'>" + p.name + "</td>" +
-                            "<td style='padding: 10px 8px;'><input list='cat-list' type='text' id='prod-cat-" + p.id + "' value='" + (p.category || '') + "' placeholder='Danh mục...' style='width:100px; height:28px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:4px; color:#a5b4fc; padding:0 4px; font-size:11px; outline:none;'></td>" +
-                            "<td style='padding: 10px 8px;'><input type='text' id='prod-img-" + p.id + "' value='" + (p.image_url || '') + "' placeholder='Link ảnh...' style='width:90px; height:28px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:4px; color:white; padding:0 4px; font-size:11px; outline:none;'></td>" +
-                            "<td style='padding: 10px 8px; text-align:right;'><input type='number' id='prod-price-" + p.id + "' value='" + p.price + "' style='width:90px; height:28px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:4px; color:#86efac; text-align:right; padding-right:4px; font-weight:700; outline:none;'></td>" +
-                            "<td style='padding: 10px 8px; text-align:center;'><input type='number' id='prod-stock-" + p.id + "' value='" + p.stock + "' style='width:70px; height:28px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:4px; color:white; text-align:center; outline:none;'></td>" +
-                            "<td style='padding: 10px 8px; text-align:center; display:flex; justify-content:center; gap:6px;'>" +
-                                "<button onclick='updateProduct(" + p.id + ")' style='background:#10b981; color:white; border:none; padding:4px 10px; border-radius:4px; font-size:11px; cursor:pointer; font-weight:bold;'>Lưu</button>" +
-                                "<button onclick='deleteProduct(" + p.id + ")' style='background:#ef4444; color:white; border:none; padding:4px 10px; border-radius:4px; font-size:11px; cursor:pointer; font-weight:bold;'>Xóa</button>" +
-                            "</td>";
+                        if (isSuper) {
+                            tr.innerHTML = 
+                                "<td style='padding: 10px 8px; text-align:center;'><span style='font-size:10px; background:#374151; color:#9ca3af; padding:2px 6px; border-radius:4px;'>HQ View</span></td>" +
+                                "<td style='padding: 10px 8px; font-weight:700; color:white;'>🍔 " + p.name + "</td>" +
+                                "<td style='padding: 10px 8px;'><span style='background:rgba(99,102,241,0.2); color:#a5b4fc; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600;'>" + (p.category || 'Chưa phân loại') + "</span></td>" +
+                                "<td style='padding: 10px 8px;'><span style='color:#9ca3af; font-size:11px;'>" + (p.image_url ? '📷 Có ảnh' : 'Không') + "</span></td>" +
+                                "<td style='padding: 10px 8px; text-align:right;'><span style='color:#86efac; font-weight:700; font-size:13px;'>" + p.price.toLocaleString('vi-VN') + " VNĐ</span></td>" +
+                                "<td style='padding: 10px 8px; text-align:center;'><span style='color:#fbbf24; font-weight:800; font-size:14px; background:rgba(245,158,11,0.15); padding:4px 10px; border-radius:6px; border:1px solid rgba(245,158,11,0.4); display:inline-block;'>📦 " + p.stock + "</span></td>" +
+                                "<td style='padding: 10px 8px; text-align:center;'><span style='font-size:11px; color:#9ca3af; font-style:italic;'>Chỉ xem (Read-Only)</span></td>";
+                        } else {
+                            tr.innerHTML = 
+                                "<td style='padding: 10px 8px; text-align:center;'><input type='checkbox' class='chk-prod' value='" + p.id + "'></td>" +
+                                "<td style='padding: 10px 8px; font-weight:600; color:white;'>" + p.name + "</td>" +
+                                "<td style='padding: 10px 8px;'><input list='cat-list' type='text' id='prod-cat-" + p.id + "' value='" + (p.category || '') + "' placeholder='Danh mục...' style='width:100px; height:28px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:4px; color:#a5b4fc; padding:0 4px; font-size:11px; outline:none;'></td>" +
+                                "<td style='padding: 10px 8px;'><input type='text' id='prod-img-" + p.id + "' value='" + (p.image_url || '') + "' placeholder='Link ảnh...' style='width:90px; height:28px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:4px; color:white; padding:0 4px; font-size:11px; outline:none;'></td>" +
+                                "<td style='padding: 10px 8px; text-align:right;'><input type='number' id='prod-price-" + p.id + "' value='" + p.price + "' style='width:90px; height:28px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:4px; color:#86efac; text-align:right; padding-right:4px; font-weight:700; outline:none;'></td>" +
+                                "<td style='padding: 10px 8px; text-align:center;'><input type='number' id='prod-stock-" + p.id + "' value='" + p.stock + "' style='width:70px; height:28px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:4px; color:white; text-align:center; outline:none;'></td>" +
+                                "<td style='padding: 10px 8px; text-align:center; display:flex; justify-content:center; gap:6px;'>" +
+                                    "<button onclick='updateProduct(" + p.id + ")' style='background:#10b981; color:white; border:none; padding:4px 10px; border-radius:4px; font-size:11px; cursor:pointer; font-weight:bold;'>Lưu</button>" +
+                                    "<button onclick='deleteProduct(" + p.id + ")' style='background:#ef4444; color:white; border:none; padding:4px 10px; border-radius:4px; font-size:11px; cursor:pointer; font-weight:bold;'>Xóa</button>" +
+                                "</td>";
+                        }
                         tbody.appendChild(tr);
                     });
                 }
@@ -2940,7 +3292,7 @@ admin_html = """<!DOCTYPE html>
                 }
             }
             
-            var xhr = new XMLHttpRequest();
+            var xhr = makeAuthXHR();
             xhr.open("POST", "/api/products/batch-update", true);
             xhr.setRequestHeader("Content-Type", "application/json");
             xhr.onload = function() {
@@ -2972,7 +3324,7 @@ admin_html = """<!DOCTYPE html>
                 return;
             }
             
-            var xhr = new XMLHttpRequest();
+            var xhr = makeAuthXHR();
             xhr.open("POST", "/api/products/batch-delete", true);
             xhr.setRequestHeader("Content-Type", "application/json");
             xhr.onload = function() {
@@ -3012,7 +3364,7 @@ admin_html = """<!DOCTYPE html>
                 return;
             }
             
-            var xhr = new XMLHttpRequest();
+            var xhr = makeAuthXHR();
             xhr.open("POST", "/api/products/add", true);
             xhr.setRequestHeader("Content-Type", "application/json");
             xhr.onload = function() {
@@ -3055,7 +3407,7 @@ admin_html = """<!DOCTYPE html>
                 return;
             }
             
-            var xhr = new XMLHttpRequest();
+            var xhr = makeAuthXHR();
             xhr.open("POST", "/api/products/update", true);
             xhr.setRequestHeader("Content-Type", "application/json");
             xhr.onload = function() {
@@ -3073,7 +3425,7 @@ admin_html = """<!DOCTYPE html>
         function deleteProduct(id) {
             if (!confirm("Bạn có chắc muốn xóa sản phẩm này khỏi thực đơn?")) return;
             
-            var xhr = new XMLHttpRequest();
+            var xhr = makeAuthXHR();
             xhr.open("DELETE", "/api/products/delete/" + id, true);
             xhr.onload = function() {
                 var res = JSON.parse(xhr.responseText);
@@ -3110,8 +3462,14 @@ admin_html = """<!DOCTYPE html>
         }
 
         function loadAdminTables() {
-            var xhr = new XMLHttpRequest();
-            xhr.open("GET", "/api/tables", true);
+            var url = "/api/tables";
+            var role = localStorage.getItem("user_role");
+            var invSel = document.getElementById("inventory-store-select");
+            if (role === "SUPER_ADMIN" && invSel && invSel.value) {
+                url += "?store_id=" + invSel.value;
+            }
+            var xhr = makeAuthXHR();
+            xhr.open("GET", url, true);
             xhr.onload = function() {
                 if (xhr.status === 200) {
                     var tables = JSON.parse(xhr.responseText);
@@ -3124,30 +3482,43 @@ admin_html = """<!DOCTYPE html>
                         return;
                     }
                     
+                    var isSuper = localStorage.getItem("user_role") === "SUPER_ADMIN";
                     tables.forEach(function(t) {
                         var tr = document.createElement("tr");
                         tr.style.borderBottom = "1px solid rgba(255,255,255,0.04)";
-                        tr.innerHTML = 
-                            "<td style='padding: 10px 8px; font-weight:600; color:white;'><input type='text' id='adm-table-name-" + t.id + "' value='" + t.name + "' style='width:120px; height:28px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:4px; color:white; padding:0 6px; font-size:12px; outline:none;'></td>" +
-                            "<td style='padding: 10px 8px; color:#a5b4fc;'>" + 
-                                "<select id='adm-table-type-" + t.id + "' style='height:28px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:4px; color:white; font-size:11px; outline:none;'>" +
-                                    "<option value='LIP' " + (t.table_type === 'LIP' ? 'selected' : '') + ">Líp</option>" +
-                                    "<option value='3C' " + (t.table_type === '3C' ? 'selected' : '') + ">3 Băng</option>" +
-                                    "<option value='POOL' " + (t.table_type === 'POOL' ? 'selected' : '') + ">Lỗ</option>" +
-                                "</select>" +
-                            "</td>" +
-                            "<td style='padding: 10px 8px;'>" +
-                                "<select id='adm-table-tier-" + t.id + "' style='height:28px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:4px; color:white; font-size:11px; outline:none;'>" +
-                                    "<option value='STANDARD' " + (t.table_tier === 'STANDARD' ? 'selected' : '') + ">Thường</option>" +
-                                    "<option value='VIP' " + (t.table_tier === 'VIP' ? 'selected' : '') + ">VIP</option>" +
-                                "</select>" +
-                            "</td>" +
-                            "<td style='padding: 10px 8px;'><input type='text' id='adm-table-cam-" + t.id + "' value='" + (t.camera_url || '') + "' placeholder='Cam ID' style='width:70px; height:28px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:4px; color:white; padding:0 4px; font-size:11px; outline:none;'></td>" +
-                            "<td style='padding: 10px 8px; text-align:right;'><input type='number' id='adm-table-price-" + t.id + "' value='" + t.price_per_hour + "' style='width:90px; height:28px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:4px; color:#86efac; text-align:right; padding-right:4px; font-weight:700; outline:none;'></td>" +
-                            "<td style='padding: 10px 8px; text-align:center; display:flex; justify-content:center; gap:6px;'>" +
-                                "<button onclick='updateAdminTable(" + t.id + ")' style='background:#10b981; color:white; border:none; padding:4px 10px; border-radius:4px; font-size:11px; cursor:pointer; font-weight:bold;'>Lưu</button>" +
-                                "<button onclick='deleteAdminTable(" + t.id + ")' style='background:#ef4444; color:white; border:none; padding:4px 10px; border-radius:4px; font-size:11px; cursor:pointer; font-weight:bold;'>Xóa</button>" +
-                            "</td>";
+                        if (isSuper) {
+                            var tType = t.table_type === 'LIP' ? 'Líp' : (t.table_type === '3C' ? '3 Băng' : 'Lỗ');
+                            var tTier = t.table_tier === 'VIP' ? 'VIP 👑' : 'Thường';
+                            tr.innerHTML = 
+                                "<td style='padding: 10px 8px; font-weight:700; color:white;'>🎱 " + t.name + "</td>" +
+                                "<td style='padding: 10px 8px;'><span style='background:rgba(99,102,241,0.2); color:#a5b4fc; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600;'>" + tType + "</span></td>" +
+                                "<td style='padding: 10px 8px;'><span style='background:" + (t.table_tier === 'VIP' ? 'rgba(245,158,11,0.2)' : 'rgba(100,116,139,0.2)') + "; color:" + (t.table_tier === 'VIP' ? '#fbbf24' : '#cbd5e1') + "; padding:3px 8px; border-radius:4px; font-size:11px; font-weight:600;'>" + tTier + "</span></td>" +
+                                "<td style='padding: 10px 8px;'><span style='color:#9ca3af; font-size:12px;'>🎥 " + (t.camera_url || 'Không có') + "</span></td>" +
+                                "<td style='padding: 10px 8px; text-align:right;'><span style='color:#86efac; font-weight:700; font-size:13px;'>" + t.price_per_hour.toLocaleString("vi-VN") + " đ/h</span></td>" +
+                                "<td style='padding: 10px 8px; text-align:center;'><span style='font-size:11px; color:#9ca3af; font-style:italic;'>Chỉ xem (Read-Only)</span></td>";
+                        } else {
+                            tr.innerHTML = 
+                                "<td style='padding: 10px 8px; font-weight:600; color:white;'><input type='text' id='adm-table-name-" + t.id + "' value='" + t.name + "' style='width:120px; height:28px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:4px; color:white; padding:0 6px; font-size:12px; outline:none;'></td>" +
+                                "<td style='padding: 10px 8px; color:#a5b4fc;'>" + 
+                                    "<select id='adm-table-type-" + t.id + "' style='height:28px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:4px; color:white; font-size:11px; outline:none;'>" +
+                                        "<option value='LIP' " + (t.table_type === 'LIP' ? 'selected' : '') + ">Líp</option>" +
+                                        "<option value='3C' " + (t.table_type === '3C' ? 'selected' : '') + ">3 Băng</option>" +
+                                        "<option value='POOL' " + (t.table_type === 'POOL' ? 'selected' : '') + ">Lỗ</option>" +
+                                    "</select>" +
+                                "</td>" +
+                                "<td style='padding: 10px 8px;'>" +
+                                    "<select id='adm-table-tier-" + t.id + "' style='height:28px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:4px; color:white; font-size:11px; outline:none;'>" +
+                                        "<option value='STANDARD' " + (t.table_tier === 'STANDARD' ? 'selected' : '') + ">Thường</option>" +
+                                        "<option value='VIP' " + (t.table_tier === 'VIP' ? 'selected' : '') + ">VIP</option>" +
+                                    "</select>" +
+                                "</td>" +
+                                "<td style='padding: 10px 8px;'><input type='text' id='adm-table-cam-" + t.id + "' value='" + (t.camera_url || '') + "' placeholder='Cam ID' style='width:70px; height:28px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:4px; color:white; padding:0 4px; font-size:11px; outline:none;'></td>" +
+                                "<td style='padding: 10px 8px; text-align:right;'><input type='number' id='adm-table-price-" + t.id + "' value='" + t.price_per_hour + "' style='width:90px; height:28px; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.1); border-radius:4px; color:#86efac; text-align:right; padding-right:4px; font-weight:700; outline:none;'></td>" +
+                                "<td style='padding: 10px 8px; text-align:center; display:flex; justify-content:center; gap:6px;'>" +
+                                    "<button onclick='updateAdminTable(" + t.id + ")' style='background:#10b981; color:white; border:none; padding:4px 10px; border-radius:4px; font-size:11px; cursor:pointer; font-weight:bold;'>Lưu</button>" +
+                                    "<button onclick='deleteAdminTable(" + t.id + ")' style='background:#ef4444; color:white; border:none; padding:4px 10px; border-radius:4px; font-size:11px; cursor:pointer; font-weight:bold;'>Xóa</button>" +
+                                "</td>";
+                        }
                         tbody.appendChild(tr);
                     });
                 }
@@ -3167,7 +3538,7 @@ admin_html = """<!DOCTYPE html>
                 return;
             }
             
-            var xhr = new XMLHttpRequest();
+            var xhr = makeAuthXHR();
             xhr.open("POST", "/api/admin/tables/add", true);
             xhr.setRequestHeader("Content-Type", "application/json");
             xhr.onload = function() {
@@ -3198,7 +3569,7 @@ admin_html = """<!DOCTYPE html>
                 return;
             }
             
-            var xhr = new XMLHttpRequest();
+            var xhr = makeAuthXHR();
             xhr.open("POST", "/api/admin/tables/update", true);
             xhr.setRequestHeader("Content-Type", "application/json");
             xhr.onload = function() {
@@ -3217,7 +3588,7 @@ admin_html = """<!DOCTYPE html>
         function deleteAdminTable(id) {
             if (!confirm("Bạn có chắc chắn muốn xóa bàn này khỏi hệ thống?")) return;
             
-            var xhr = new XMLHttpRequest();
+            var xhr = makeAuthXHR();
             xhr.open("DELETE", "/api/admin/tables/" + id, true);
             xhr.onload = function() {
                 var res = JSON.parse(xhr.responseText);
@@ -3252,7 +3623,7 @@ admin_html = """<!DOCTYPE html>
             var btns = card.querySelectorAll("button");
             for (var i = 0; i < btns.length; i++) { btns[i].disabled = true; }
             
-            var xhr = new XMLHttpRequest();
+            var xhr = makeAuthXHR();
             xhr.open("POST", "/api/session/add-items/" + tableId, true);
             xhr.setRequestHeader("Content-Type", "application/json");
             xhr.onload = function() {
@@ -3276,6 +3647,14 @@ admin_html = """<!DOCTYPE html>
 
         // === HANDLE ACTION ===
         function handleAction(card, action) {
+            if (action === "confirm" && (card._notifId || card._eventId)) {
+                var nid = card._notifId || card._eventId;
+                if (typeof nid === 'number' || (typeof nid === 'string' && !isNaN(nid))) {
+                    var xhr = makeAuthXHR();
+                    xhr.open("POST", "/api/notifications/" + nid + "/resolve", true);
+                    xhr.send();
+                }
+            }
             var btns = card.querySelectorAll("button");
             for (var i = 0; i < btns.length; i++) { btns[i].disabled = true; }
 
@@ -3308,6 +3687,24 @@ admin_html = """<!DOCTYPE html>
         // === RENDER EVENT ===
         function renderEvent(data) {
             if (!data || !data.event_type) return;
+            var token = localStorage.getItem("jwt_token");
+            if (token) {
+                try {
+                    var base64Url = token.split('.')[1];
+                    var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                    var payload = JSON.parse(decodeURIComponent(window.atob(base64).split('').map(function(c) { return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2); }).join('')));
+                    
+                    // Super Admin (Quán Mẹ) không nhận âm thanh/popup thông báo order món để giữ tổng quan sạch
+                    if (payload && payload.role === "SUPER_ADMIN") {
+                        if (data.event_type === "CUSTOMER_ORDER") return;
+                    }
+                    
+                    // Cửa hàng con chỉ nhận thông báo order thuộc đúng cửa hàng của mình
+                    if (payload && payload.role !== "SUPER_ADMIN" && payload.store_id && data.store_id) {
+                        if (parseInt(data.store_id) !== parseInt(payload.store_id)) return;
+                    }
+                } catch(e) {}
+            }
             // Bo qua cac tin nhan khach vay tay goi mon bang AI Camera
             if (data.event_type === "HAND_RAISED") return;
             // De-duplicate bang unique event ID de tranh spam polling
@@ -3328,6 +3725,8 @@ admin_html = """<!DOCTYPE html>
             loadTables();
 
             var card = document.createElement("div");
+            card._notifId = data.notif_id || data.id;
+            card._eventId = data.id;
             card.className = "event-card";
             if (data.event_type === "HAND_RAISED") {
                 card.className += " urgent";
@@ -3514,10 +3913,28 @@ admin_html = """<!DOCTYPE html>
         }
 
         // === WEBSOCKET CONNECTION ===
+        
+        // === AUTH HELPER: Auto-attach JWT to every XHR ===
+        function makeAuthXHR() {
+            var xhr = new XMLHttpRequest();
+            var _open = xhr.open.bind(xhr);
+            xhr.open = function(method, url, async) {
+                _open(method, url, async === undefined ? true : async);
+                var token = localStorage.getItem('jwt_token');
+                if (token) {
+                    xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+                }
+            };
+            return xhr;
+        }
+
+        
+        
         function connectWebSocket() {
             try {
                 var wsProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-                var wsUrl = wsProtocol + "//" + window.location.host + "/ws/admin";
+                var token = localStorage.getItem("jwt_token") || "";
+                var wsUrl = wsProtocol + "//" + window.location.host + "/ws/admin" + (token ? "?token=" + encodeURIComponent(token) : "");
                 
                 var ws = new WebSocket(wsUrl);
                 
@@ -3563,7 +3980,7 @@ admin_html = """<!DOCTYPE html>
 
         function startPollingEvents() {
             function doPoll() {
-                var xhr = new XMLHttpRequest();
+                var xhr = makeAuthXHR();
                 xhr.open("GET", "/api/poll?_" + Date.now(), true);
                 xhr.onload = function() {
                     if (xhr.status === 200) {
@@ -3589,7 +4006,7 @@ admin_html = """<!DOCTYPE html>
                 xhr.send();
             }
             doPoll();
-            setInterval(doPoll, 2000);
+            setInterval(doPoll, 10000);
         }
 
         connectWebSocket();
@@ -3615,13 +4032,13 @@ admin_html = """<!DOCTYPE html>
             clipStatusDiv.className = "highlight-status highlight-processing";
             clipStatusDiv.textContent = "AI dang cat 30 giay gan nhat thanh video... Vui long doi 5-10 giay.";
 
-            var xhr = new XMLHttpRequest();
+            var xhr = makeAuthXHR();
             xhr.open("POST", "/api/clip/" + tableId, true);
             xhr.onload = function() {
                 var checkCount = 0;
                 var checkInterval = setInterval(function() {
                     checkCount++;
-                    var xhr2 = new XMLHttpRequest();
+                    var xhr2 = makeAuthXHR();
                     xhr2.open("GET", "/api/clip-status/" + tableId + "?_=" + Date.now(), true);
                     xhr2.onload = function() {
                         if (xhr2.status === 200) {
@@ -3681,7 +4098,7 @@ admin_html = """<!DOCTYPE html>
             clipStatusDiv.className = "highlight-status highlight-processing";
             clipStatusDiv.textContent = "Co may thoi gian dang tim kiem va trich xuat video luc " + selectedTime + "...";
 
-            var xhr = new XMLHttpRequest();
+            var xhr = makeAuthXHR();
             xhr.open("POST", "/api/highlight-past/" + tableId, true);
             xhr.setRequestHeader("Content-Type", "application/json");
             xhr.onload = function() {
@@ -3735,7 +4152,7 @@ admin_html = """<!DOCTYPE html>
 
         // Xoa clip highlight
         function deleteClip(filename) {
-            var xhr = new XMLHttpRequest();
+            var xhr = makeAuthXHR();
             xhr.open("DELETE", "/api/clip/" + filename, true);
             xhr.onload = function() {
                 if (xhr.status === 200) {
@@ -3748,7 +4165,7 @@ admin_html = """<!DOCTYPE html>
         }
 
         function loadClips() {
-            var xhr = new XMLHttpRequest();
+            var xhr = makeAuthXHR();
             xhr.open("GET", "/api/clips?_=" + Date.now(), true);
             xhr.onload = function() {
                 if (xhr.status === 200) {
@@ -3840,7 +4257,7 @@ admin_html = """<!DOCTYPE html>
         }
 
         function fetchPosProducts() {
-            var xhr = new XMLHttpRequest();
+            var xhr = makeAuthXHR();
             xhr.open("GET", "/api/products", true);
             xhr.onload = function() {
                 if (xhr.status === 200) {
@@ -4033,7 +4450,7 @@ admin_html = """<!DOCTYPE html>
             btn.textContent = "⏳ Đang thêm vào hóa đơn...";
             btn.disabled = true;
             
-            var xhr = new XMLHttpRequest();
+            var xhr = makeAuthXHR();
             xhr.open("POST", "/api/session/add-items/" + posCurrentTableId, true);
             xhr.setRequestHeader("Content-Type", "application/json");
             xhr.onload = function() {
@@ -4064,10 +4481,296 @@ admin_html = """<!DOCTYPE html>
             xhr.send(JSON.stringify({ items: itemsList }));
         }
 
+
+        function applyRoleUI() {
+            var token = localStorage.getItem("jwt_token");
+            if (!token) return;
+            try {
+                var base64Url = token.split('.')[1];
+                var base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                var jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+                var payload = JSON.parse(jsonPayload);
+                var titleEl = document.getElementById("nav-header-title");
+                var subEl = document.getElementById("nav-header-sub");
+                var roleBadge = document.getElementById("role-badge-display");
+                if (payload && (payload.role === "SUPER_ADMIN" || !payload.store_id)) {
+                    if (titleEl) titleEl.innerHTML = "🏢 TRỤ SỞ CHÍNH HQ <span style='font-size:12px; background:#f59e0b; color:#0f172a; padding:2px 8px; border-radius:4px; font-weight:bold; margin-left:8px; vertical-align:middle;'>READ-ONLY</span>";
+                    if (subEl) subEl.textContent = "Chế độ Giám sát Toàn chuỗi - Vô hiệu hóa thao tác sửa nghiệp vụ chi nhánh";
+                    if (roleBadge) {
+                        roleBadge.innerHTML = "👤 " + (payload.username || "admin") + " | 🏢 Trụ Sở HQ";
+                        roleBadge.style.background = "linear-gradient(135deg, #f59e0b, #d97706)";
+                        roleBadge.style.color = "#0f172a";
+                    }
+                    var style = document.createElement('style');
+                    style.innerHTML = ".table-card button, .order-card button, .event-card button, .event-actions button, #form-add-product-container, #form-add-table-container, #tab-content-products button:not(.tab-btn), #tab-content-tables button:not(.tab-btn), .chk-history, #chk-all-history, #btn-delete-history, #pos-modal button:not([onclick*='close']), #history-modal button:not([onclick*='close']), #bill-modal button:not([onclick*='close']):not(#bill-confirm-btn) { display: none !important; pointer-events: none !important; } #realtime-alerts-container { display: none !important; }";
+                    document.head.appendChild(style);
+                    var hqPanel = document.getElementById("hq-revenue-panel");
+                    if (hqPanel) {
+                        hqPanel.style.display = "block";
+                        loadHQOverviewData();
+                    }
+                    var invCont = document.getElementById('inventory-store-container');
+                    if (invCont) invCont.style.display = 'block';
+                    var invSel = document.getElementById('inventory-store-select');
+                    if (invSel && invSel.options.length === 0) {
+                        var xhrStores = makeAuthXHR();
+                        xhrStores.open("GET", "/api/stores", true);
+                        xhrStores.onload = function() {
+                            if (xhrStores.status === 200) {
+                                try {
+                                    var res = JSON.parse(xhrStores.responseText);
+                                    if (res.data) {
+                                        res.data.forEach(function(s) {
+                                            var opt = document.createElement("option");
+                                            opt.value = s.id;
+                                            opt.textContent = s.name;
+                                            invSel.appendChild(opt);
+                                        });
+                                        if (document.getElementById("inventory-modal") && document.getElementById("inventory-modal").style.display !== "none") {
+                                            onInventoryStoreChange();
+                                        }
+                                    }
+                                } catch(e) {}
+                            }
+                        };
+                        xhrStores.send();
+                    }
+                } else if (payload) {
+                    var stId = payload.store_id || 1;
+                    if (titleEl) titleEl.innerHTML = "🏨 Bida Club - Chi Nhánh Quán " + stId;
+                    if (subEl) subEl.textContent = "Quản lý Độc Lập - Quyền Thu Ngân & Cửa Hàng Trưởng";
+                    if (roleBadge) {
+                        roleBadge.innerHTML = "👤 " + (payload.username || "manager") + " | 🏨 Quán " + stId;
+                        roleBadge.style.background = "linear-gradient(135deg, #10b981, #059669)";
+                    }
+                    var hqPanel = document.getElementById("hq-revenue-panel");
+                    if (hqPanel) hqPanel.style.display = "none";
+                    var invCont = document.getElementById('inventory-store-container');
+                    if (invCont) invCont.style.display = 'none';
+                    var rtCont = document.getElementById('realtime-alerts-container');
+                    if (rtCont) rtCont.style.display = 'block';
+                }
+            } catch(e) {}
+        }
+
+        function formatMoneyFull(n) {
+            return (n || 0).toLocaleString("vi-VN") + " ₫";
+        }
+        function formatMoneyCompact(n) {
+            if (!n) return "0 ₫";
+            if (n >= 1000000) return (n / 1000000).toFixed(1) + "tr";
+            if (n >= 1000) return (n / 1000).toFixed(0) + "k";
+            return n + " ₫";
+        }
+
+        // ===== HQ OVERVIEW & STORE REVENUE DASHBOARD LOGIC (REAL-TIME) =====
+        function loadHQOverviewData() {
+            var hqPanel = document.getElementById("hq-revenue-panel");
+            if (!hqPanel || hqPanel.style.display === "none") return;
+
+            var overviewData = null, compData = null;
+            var done1 = false, done2 = false;
+
+            function tryRender() {
+                if (!done1 || !done2) return;
+                var d = overviewData || {};
+                var liveRevByStore = {};
+                var liveTotal = 0;
+                ((compData && compData.data) || []).forEach(function(s) {
+                    var lr = s.live_revenue || 0;
+                    liveRevByStore[s.store_id] = lr;
+                    liveTotal += lr;
+                });
+
+                var syncLabel = document.getElementById("hq-sync-status");
+                if (syncLabel) {
+                    var now = new Date();
+                    var ts = now.getHours().toString().padStart(2,"0") + ":" + now.getMinutes().toString().padStart(2,"0") + ":" + now.getSeconds().toString().padStart(2,"0");
+                    syncLabel.innerHTML = "<span style=\'width:7px;height:7px;background:#22c55e;border-radius:50%;display:inline-block;margin-right:4px;\'></span>Live " + ts;
+                }
+                var countLabel = document.getElementById("hq-store-count-label");
+                if (countLabel) countLabel.textContent = (d.total_stores || 3) + " chi nhanh";
+
+                var baseToday = d.today_revenue || 0;
+                var todayRevEl = document.getElementById("hq-card-today-rev");
+                if (todayRevEl) {
+                    var liveHtml = liveTotal > 0 ? "<div style=\'font-size:11px;color:#f59e0b;margin-top:3px;font-weight:700;\'>Dang choi: +" + formatMoneyCompact(liveTotal) + "</div>" : "";
+                    todayRevEl.innerHTML = formatMoneyFull(baseToday + liveTotal) + liveHtml;
+                }
+                var todayBadgeEl = document.getElementById("hq-card-today-badge");
+                if (todayBadgeEl) {
+                    var g = d.today_growth_pct || 0;
+                    todayBadgeEl.textContent = (g >= 0 ? "+" : "") + g + "% so voi hom qua";
+                    todayBadgeEl.style.color = g >= 0 ? "#15803d" : "#b91c1c";
+                    todayBadgeEl.style.background = g >= 0 ? "#f0fdf4" : "#fef2f2";
+                }
+                var monthRevEl = document.getElementById("hq-card-month-rev");
+                if (monthRevEl) monthRevEl.textContent = formatMoneyFull(d.month_revenue || 0);
+                var monthBadgeEl = document.getElementById("hq-card-month-badge");
+                if (monthBadgeEl) {
+                    var mg = d.month_growth_pct || 0;
+                    monthBadgeEl.textContent = (mg >= 0 ? "+" : "") + mg + "% so voi thang truoc";
+                    monthBadgeEl.style.color = mg >= 0 ? "#15803d" : "#b91c1c";
+                    monthBadgeEl.style.background = mg >= 0 ? "#f0fdf4" : "#fef2f2";
+                }
+                var activeStoresEl = document.getElementById("hq-card-active-stores");
+                if (activeStoresEl) activeStoresEl.textContent = (d.active_stores || 0) + " / " + (d.total_stores || 0);
+                var tablesPlayingEl = document.getElementById("hq-card-tables-playing");
+                if (tablesPlayingEl) tablesPlayingEl.textContent = (d.playing_tables || 0) + " / " + (d.total_tables || 0);
+
+                var barsContainer = document.getElementById("hq-bars-container");
+                if (barsContainer) {
+                    barsContainer.innerHTML = "";
+                    var breakdown = d.stores_breakdown || [];
+                    var maxRevArr = breakdown.map(function(b){ return (b.today_revenue || 0) + (liveRevByStore[b.store_id] || 0); });
+                    var maxRev = maxRevArr.length > 0 ? Math.max.apply(null, maxRevArr) : 0;
+                    if (!maxRev) maxRev = 1;
+                    if (breakdown.length === 0) {
+                        barsContainer.innerHTML = "<div style=\'color:#64748b;font-size:13px;\'>Chua co du lieu doanh thu hom nay</div>";
+                    } else {
+                        breakdown.forEach(function(b) {
+                            var live = liveRevByStore[b.store_id] || 0;
+                            var total = (b.today_revenue || 0) + live;
+                            var pct = Math.max(4, Math.round((total / maxRev) * 100));
+                            var livePct = total > 0 ? Math.round((live / total) * pct) : 0;
+                            var liveBar = live > 0 ? "<div style=\'height:100%;width:" + livePct + "%;background:#f59e0b;border-radius:20px;position:absolute;right:0;opacity:0.9;\'></div>" : "";
+                            var liveAmt = live > 0 ? "<div style=\'font-size:10px;color:#f59e0b;font-weight:700;\'>+" + formatMoneyCompact(live) + "</div>" : "";
+                            var storeName = b.name || ("Chi nhanh " + b.store_id);
+                            barsContainer.innerHTML +=
+                                "<div style=\'display:flex;align-items:center;gap:12px;font-size:13px;\'>" +
+                                    "<div style=\'width:120px;font-weight:600;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;\'>" + storeName + "</div>" +
+                                    "<div style=\'flex:1;background:#f1f5f9;height:10px;border-radius:20px;overflow:hidden;position:relative;\'>" +
+                                        "<div style=\'height:100%;width:" + pct + "%;background:#2563eb;border-radius:20px;transition:width 0.6s;position:absolute;left:0;\'></div>" +
+                                        liveBar +
+                                    "</div>" +
+                                    "<div style=\'width:110px;text-align:right;font-weight:700;color:#0f172a;\'>" + formatMoneyCompact(total) + liveAmt + "</div>" +
+                                "</div>";
+                        });
+                    }
+                }
+
+                var tableBody = document.getElementById("hq-branch-table-body");
+                if (tableBody) {
+                    tableBody.innerHTML = "";
+                    var breakdown = d.stores_breakdown || [];
+                    if (breakdown.length === 0) {
+                        tableBody.innerHTML = "<tr><td colspan=\'4\' style=\'color:#64748b;padding:12px;\'>Chua co du lieu chi nhanh</td></tr>";
+                    } else {
+                        breakdown.forEach(function(b) {
+                            var live = liveRevByStore[b.store_id] || 0;
+                            var total = (b.today_revenue || 0) + live;
+                            var sColor = b.status === "Online" ? "#15803d" : "#b91c1c";
+                            var sBg = b.status === "Online" ? "#f0fdf4" : "#fef2f2";
+                            var liveSpan = live > 0 ? "<span style=\'font-size:10px;color:#f59e0b;margin-left:6px;font-weight:700;\'>+" + formatMoneyCompact(live) + "</span>" : "";
+                            var tr = document.createElement("tr");
+                            tr.style.borderBottom = "1px solid #f1f5f9";
+                            tr.innerHTML =
+                                "<td style=\'padding:12px 8px;font-weight:600;color:#0f172a;\'>" + b.name + "</td>" +
+                                "<td style=\'padding:12px 8px;color:#475569;\'>" + b.active_tables + " / " + b.total_tables + "</td>" +
+                                "<td style=\'padding:12px 8px;font-weight:700;color:#0f172a;\'>" + formatMoneyCompact(total) + liveSpan + "</td>" +
+                                "<td style=\'padding:12px 8px;\'><span style=\'color:" + sColor + ";background:" + sBg + ";font-weight:600;padding:3px 8px;border-radius:6px;font-size:12px;\'>" + b.status + "</span></td>";
+                            tableBody.appendChild(tr);
+                        });
+                    }
+                }
+            }
+
+            var xhr1 = makeAuthXHR();
+            xhr1.open("GET", "/api/hq/overview", true);
+            xhr1.onload = function() {
+                done1 = true;
+                if (xhr1.status === 200) { try { overviewData = JSON.parse(xhr1.responseText).data || {}; } catch(e) {} }
+                tryRender();
+            };
+            xhr1.onerror = function() { done1 = true; tryRender(); };
+
+            var xhr2 = makeAuthXHR();
+            xhr2.open("GET", "/api/hq/revenue-comparison?period=day", true);
+            xhr2.onload = function() {
+                done2 = true;
+                if (xhr2.status === 200) { try { compData = JSON.parse(xhr2.responseText); } catch(e) {} }
+                tryRender();
+            };
+            xhr2.onerror = function() { done2 = true; tryRender(); };
+
+            xhr1.send();
+            xhr2.send();
+        }
+
+        // Auto reload real-time moi 10 giay
+        setInterval(function() {
+            var hqPanel = document.getElementById("hq-revenue-panel");
+            if (hqPanel && hqPanel.style.display !== "none") {
+                loadHQOverviewData();
+            }
+        }, 10000);
+
         // Load ban dau
+        applyRoleUI();
         loadClips();
         loadTables();
+        
+        function showLoginModal() {
+            var modal = document.getElementById("jwt-login-modal");
+            if (modal) modal.style.display = "flex";
+        }
+        function performLogin() {
+            var uEl = document.getElementById("login-username");
+            var pEl = document.getElementById("login-password");
+            var u = uEl ? uEl.value.trim() : "";
+            var p = pEl ? pEl.value.trim() : "";
+            var errEl = document.getElementById("login-error");
+            if (!u || !p) {
+                if (errEl) errEl.textContent = "Vui lòng nhập đầy đủ tài khoản và mật khẩu!";
+                return;
+            }
+            var xhr = makeAuthXHR();
+            xhr.open("POST", "/api/auth/login", true);
+            xhr.setRequestHeader("Content-Type", "application/json");
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    var res = JSON.parse(xhr.responseText);
+                    if (res && res.access_token) {
+                        localStorage.setItem("jwt_token", res.access_token);
+                        if (res.user && res.user.role) {
+                            localStorage.setItem("user_role", res.user.role);
+                        }
+                        var modal = document.getElementById("jwt-login-modal");
+                        if (modal) modal.style.display = "none";
+                        location.reload();
+                    }
+                } else {
+                    if (errEl) errEl.textContent = "Sai tài khoản hoặc mật khẩu!";
+                }
+            };
+            xhr.send(JSON.stringify({ username: u, password: p }));
+        }
+        function logout() {
+            localStorage.removeItem("jwt_token");
+            localStorage.removeItem("user_role");
+            showLoginModal();
+        }
+        
+        if (!localStorage.getItem("jwt_token")) {
+            showLoginModal();
+        }
     </script>
-
+    <div id="jwt-login-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(15,23,42,0.85); backdrop-filter:blur(8px); z-index:99999; justify-content:center; align-items:center; font-family:sans-serif;">
+        <div style="background:#1e293b; border:1px solid #334155; padding:32px; border-radius:16px; width:380px; box-shadow:0 25px 50px -12px rgba(0,0,0,0.5); text-align:center;">
+            <h2 style="color:#f8fafc; margin-top:0; margin-bottom:8px; font-size:22px;">🔒 Đăng Nhập Quản Lý</h2>
+            <p style="color:#94a3b8; font-size:13px; margin-bottom:24px;">Hệ thống bảo mật Bida AI theo chi nhánh</p>
+            <input id="login-username" onkeydown="if(event.key==='Enter') performLogin()" type="text" placeholder="Tài khoản (ví dụ: admin hoặc manager1)" style="width:100%; padding:12px 16px; background:#0f172a; border:1px solid #334155; border-radius:8px; color:#f8fafc; margin-bottom:12px; box-sizing:border-box; font-size:14px;">
+            <input id="login-password" onkeydown="if(event.key==='Enter') performLogin()" type="password" placeholder="Mật khẩu (ví dụ: secret hoặc admin)" style="width:100%; padding:12px 16px; background:#0f172a; border:1px solid #334155; border-radius:8px; color:#f8fafc; margin-bottom:16px; box-sizing:border-box; font-size:14px;">
+            <div id="login-error" style="color:#ef4444; font-size:13px; margin-bottom:16px; min-height:18px;"></div>
+            <button onclick="performLogin()" style="width:100%; padding:12px; background:linear-gradient(135deg,#3b82f6,#2563eb); color:white; border:none; border-radius:8px; font-weight:bold; cursor:pointer; font-size:15px; box-shadow:0 4px 12px rgba(37,99,235,0.3);">Đăng Nhập Ngay</button>
+            <div style="margin-top:20px; font-size:12px; color:#64748b; text-align:left; background:#0f172a; padding:10px; border-radius:6px;">
+                <b>Tài khoản mẫu:</b><br>
+                • Quán 1: <code>manager1</code> / <code>secret</code><br>
+                • Trụ sở HQ: <code>admin</code> / <code>secret</code>
+            </div>
+        </div>
+    </div>
 </body>
 </html>"""

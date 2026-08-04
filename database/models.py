@@ -1,6 +1,6 @@
 from datetime import datetime
 import enum
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Enum as SQLEnum
+from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey, Boolean
 from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
@@ -14,40 +14,59 @@ class NotificationStatus(str, enum.Enum):
     PENDING = "PENDING"
     RESOLVED = "RESOLVED"
 
+class StoreModel(Base):
+    __tablename__ = "stores"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(100), nullable=False, index=True)
+    address = Column(String(255), default="")
+    phone = Column(String(20), default="")
+    status = Column(String(50), default="ACTIVE")
+
+class UserModel(Base):
+    __tablename__ = "users"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    store_id = Column(Integer, ForeignKey("stores.id"), nullable=True, index=True) # NULL for HQ SUPER_ADMIN
+    username = Column(String(50), unique=True, index=True, nullable=False)
+    password_hash = Column(String(255), nullable=False)
+    role = Column(String(50), nullable=False) # SUPER_ADMIN, STORE_MANAGER, CASHIER
+
 class BilliardTable(Base):
     __tablename__ = "billiard_tables"
     
     id = Column(Integer, primary_key=True, index=True)
+    store_id = Column(Integer, ForeignKey("stores.id"), nullable=False, default=1, index=True)
     name = Column(String(100), index=True)
     camera_url = Column(String(255))
     current_status = Column(String(50), default=TableStatus.EMPTY.value)
-    price_per_hour = Column(Float, default=50000.0) # Giá cơ bản: 50k VND / giờ
-    
-    # Loại bàn: VIP, STANDARD (Thường)
+    price_per_hour = Column(Float, default=50000.0)
     table_tier = Column(String(50), default="STANDARD")
-    
-    # Thể loại chơi: LIP (Bida Líp), 3C (Bida Phăng/3 Băng), POOL (Bida Lỗ)
     table_type = Column(String(50), default="LIP")
 
 class PlaySession(Base):
     __tablename__ = "play_sessions"
     
     id = Column(Integer, primary_key=True, index=True)
+    store_id = Column(Integer, ForeignKey("stores.id"), nullable=False, default=1, index=True)
     table_id = Column(Integer, ForeignKey("billiard_tables.id"))
     start_time = Column(DateTime, default=datetime.utcnow)
     end_time = Column(DateTime, nullable=True)
     total_minutes = Column(Integer, default=0)
     play_fee = Column(Float, default=0.0)
-    status = Column(String(50), default="ACTIVE") # ACTIVE, COMPLETED
+    services_fee = Column(Float, default=0.0)
+    total_amount = Column(Float, default=0.0)
+    status = Column(String(50), default="ACTIVE", index=True) # ACTIVE, COMPLETED
+    is_synced_to_hq = Column(Boolean, default=False, index=True)
     
-    # Quan he den danh sach mon goi
     order_items = relationship("SessionOrderItem", back_populates="session", cascade="all, delete-orphan")
 
 class Product(Base):
     __tablename__ = "products"
     
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(100), unique=True, index=True, nullable=False)
+    store_id = Column(Integer, ForeignKey("stores.id"), nullable=False, default=1, index=True)
+    name = Column(String(100), index=True, nullable=False)
     price = Column(Float, default=0.0)
     stock = Column(Integer, default=0)
     category = Column(String(50))
@@ -59,13 +78,14 @@ class SessionOrderItem(Base):
     __tablename__ = "session_order_items"
     
     id = Column(Integer, primary_key=True, index=True)
+    store_id = Column(Integer, ForeignKey("stores.id"), nullable=False, default=1, index=True)
     session_id = Column(Integer, ForeignKey("play_sessions.id"))
     product_id = Column(Integer, ForeignKey("products.id"), nullable=True)
     item_name = Column(String(100))
     quantity = Column(Integer, default=1)
     price = Column(Float)
     total_price = Column(Float)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
     
     session = relationship("PlaySession", back_populates="order_items")
     product = relationship("Product", back_populates="order_items")
@@ -74,8 +94,9 @@ class AIEvent(Base):
     __tablename__ = "ai_events"
     
     id = Column(Integer, primary_key=True, index=True)
+    store_id = Column(Integer, ForeignKey("stores.id"), nullable=False, default=1, index=True)
     table_id = Column(Integer, ForeignKey("billiard_tables.id"))
-    event_type = Column(String(100)) # TABLE_ACTIVE, TABLE_EMPTY, HAND_RAISED
+    event_type = Column(String(100), index=True) # TABLE_ACTIVE, TABLE_EMPTY, HAND_RAISED
     confidence_score = Column(Float)
     created_at = Column(DateTime, default=datetime.utcnow)
 
@@ -83,6 +104,7 @@ class StaffNotification(Base):
     __tablename__ = "staff_notifications"
     
     id = Column(Integer, primary_key=True, index=True)
+    store_id = Column(Integer, ForeignKey("stores.id"), nullable=False, default=1, index=True)
     table_id = Column(Integer, ForeignKey("billiard_tables.id"))
     notification_type = Column(String(100))
     status = Column(String(50), default=NotificationStatus.PENDING.value)
