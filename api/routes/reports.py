@@ -196,10 +196,12 @@ def get_revenue_comparison(period: str = 'month', store_ids: str = None, ctx: St
 
         store_stats = defaultdict(lambda: {'session_count': 0, 'total_revenue': 0, 'live_revenue': 0, 'live_count': 0})
 
+        from sqlalchemy import or_, and_
+
         # ✅ 1. Doanh thu từ phiên ĐÃ HOÀN TẤT (COMPLETED)
         completed_q = db.query(PlaySession).filter(
             PlaySession.status == 'COMPLETED',
-            PlaySession.start_time >= start_dt
+            or_(PlaySession.end_time >= start_dt, PlaySession.start_time >= start_dt)
         )
         if filter_ids:
             completed_q = completed_q.filter(PlaySession.store_id.in_(filter_ids))
@@ -211,9 +213,9 @@ def get_revenue_comparison(period: str = 'month', store_ids: str = None, ctx: St
                 revenue = (s.play_fee or 0) + (s.services_fee or 0)
             store_stats[sid]['total_revenue'] += revenue
 
-        # ✅ 2. Doanh thu real-time từ phiên ĐANG CHƠI (PLAYING)
+        # ✅ 2. Doanh thu real-time từ phiên ĐANG CHƠI (ACTIVE / PLAYING)
         playing_q = db.query(PlaySession).filter(
-            PlaySession.status == 'PLAYING',
+            PlaySession.status.in_(['ACTIVE', 'PLAYING']),
             PlaySession.start_time >= start_dt
         )
         if filter_ids:
@@ -271,6 +273,7 @@ def get_hq_overview(ctx: StoreContext = Depends(get_store_context)):
     try:
         from database.models import PlaySession, StoreModel, BilliardTable
         from datetime import datetime, timedelta
+        from sqlalchemy import or_, and_
 
         now = datetime.utcnow()
         today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
@@ -284,14 +287,16 @@ def get_hq_overview(ctx: StoreContext = Depends(get_store_context)):
 
         today_sessions = db.query(PlaySession).filter(
             PlaySession.status == 'COMPLETED',
-            PlaySession.start_time >= today_start
+            or_(PlaySession.end_time >= today_start, PlaySession.start_time >= today_start)
         ).all()
         today_rev = sum((s.total_amount or ((s.play_fee or 0) + (s.services_fee or 0))) for s in today_sessions)
 
         yesterday_sessions = db.query(PlaySession).filter(
             PlaySession.status == 'COMPLETED',
-            PlaySession.start_time >= yesterday_start,
-            PlaySession.start_time < today_start
+            or_(
+                and_(PlaySession.end_time >= yesterday_start, PlaySession.end_time < today_start),
+                and_(PlaySession.start_time >= yesterday_start, PlaySession.start_time < today_start)
+            )
         ).all()
         yesterday_rev = sum((s.total_amount or ((s.play_fee or 0) + (s.services_fee or 0))) for s in yesterday_sessions)
 
@@ -302,14 +307,16 @@ def get_hq_overview(ctx: StoreContext = Depends(get_store_context)):
 
         month_sessions = db.query(PlaySession).filter(
             PlaySession.status == 'COMPLETED',
-            PlaySession.start_time >= month_start
+            or_(PlaySession.end_time >= month_start, PlaySession.start_time >= month_start)
         ).all()
         month_rev = sum((s.total_amount or ((s.play_fee or 0) + (s.services_fee or 0))) for s in month_sessions)
 
         last_month_sessions = db.query(PlaySession).filter(
             PlaySession.status == 'COMPLETED',
-            PlaySession.start_time >= last_month_start,
-            PlaySession.start_time < month_start
+            or_(
+                and_(PlaySession.end_time >= last_month_start, PlaySession.end_time < month_start),
+                and_(PlaySession.start_time >= last_month_start, PlaySession.start_time < month_start)
+            )
         ).all()
         last_month_rev = sum((s.total_amount or ((s.play_fee or 0) + (s.services_fee or 0))) for s in last_month_sessions)
 
@@ -409,10 +416,13 @@ def get_store_revenue_report(
             else:
                 end_dt = now.replace(hour=23, minute=59, second=59, microsecond=999999)
 
+        from sqlalchemy import or_, and_
         query = db.query(PlaySession).filter(
             PlaySession.status == 'COMPLETED',
-            PlaySession.end_time >= start_dt,
-            PlaySession.end_time <= end_dt
+            or_(
+                and_(PlaySession.end_time >= start_dt, PlaySession.end_time <= end_dt),
+                and_(PlaySession.start_time >= start_dt, PlaySession.start_time <= end_dt)
+            )
         )
 
         if target_store_id:

@@ -143,6 +143,13 @@ def start_session(table_id: int):
         new_session = PlaySession(table_id=table_id, store_id=table.store_id)
         db.add(new_session)
         db.commit()
+
+        try:
+            from api.websocket_server import websocket_manager
+            event_data = {"event": "SESSION_STARTED", "table_id": table_id, "store_id": table.store_id}
+            websocket_manager.broadcast_sync(json.dumps(event_data))
+        except Exception:
+            pass
         return JSONResponse({"status": "ok", "message": "Da bat dau tinh gio ban", "session_id": new_session.id})
     except Exception as e:
         return JSONResponse({"status": "error", "message": str(e)}, status_code=500)
@@ -381,6 +388,13 @@ def stop_session(table_id: int):
         
         table.current_status = "EMPTY"
         db.commit()
+
+        try:
+            from api.websocket_server import websocket_manager
+            event_data = {"event": "SESSION_COMPLETED", "table_id": table_id, "store_id": table.store_id, "total_amount": total_bill}
+            websocket_manager.broadcast_sync(json.dumps(event_data))
+        except Exception:
+            pass
         
         return JSONResponse({
             "status": "ok",

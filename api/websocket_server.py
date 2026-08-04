@@ -6,16 +6,20 @@ class ConnectionManager:
         self.active_connections: List[Any] = []
         self.connections_by_store: Dict[int, List[Any]] = {}
         self.hq_connections: List[Any] = []
+        self.ws_to_sid: Dict[Any, str] = {}
         self.latest_payload = "{}"
         self.loop = None
 
-    async def connect(self, websocket: Any, store_id: Optional[int] = 1, is_hq: bool = False):
+    async def connect(self, websocket: Any, store_id: Optional[int] = 1, is_hq: bool = False, sid: Optional[str] = None):
         import asyncio
         if self.loop is None:
             self.loop = asyncio.get_running_loop()
         await websocket.accept()
         if websocket not in self.active_connections:
             self.active_connections.append(websocket)
+            
+        if sid:
+            self.ws_to_sid[websocket] = sid
             
         if is_hq or store_id is None or store_id == 0:
             if websocket not in self.hq_connections:
@@ -26,13 +30,15 @@ class ConnectionManager:
             if websocket not in self.connections_by_store[store_id]:
                 self.connections_by_store[store_id].append(websocket)
                 
-        print(f"[WebSocket] Client connected (store_id={store_id}, is_hq={is_hq}). Total active: {len(self.active_connections)}")
+        print(f"[WebSocket] Client connected (store_id={store_id}, is_hq={is_hq}, sid={sid}). Total active: {len(self.active_connections)}")
 
     def disconnect(self, websocket: Any):
         if websocket in self.active_connections:
             self.active_connections.remove(websocket)
         if websocket in self.hq_connections:
             self.hq_connections.remove(websocket)
+        if websocket in self.ws_to_sid:
+            del self.ws_to_sid[websocket]
         for store_id, conns in self.connections_by_store.items():
             if websocket in conns:
                 conns.remove(websocket)

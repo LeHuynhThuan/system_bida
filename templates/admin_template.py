@@ -1173,7 +1173,18 @@ admin_html = """<!DOCTYPE html>
             border-radius: 12px;
             border: 2px solid #0f0c29;
             box-shadow: 0 0 12px rgba(239, 68, 68, 0.9);
-            line-height: 1;
+        /* === REDUCE LAG FOR MANAGERS === */
+        body.manager-mode *:not(.sidebar),
+        body.manager-mode *:not(.sidebar)::before,
+        body.manager-mode *:not(.sidebar)::after {
+            animation: none !important;
+            transition: none !important;
+            transform: none !important;
+        }
+        body.manager-mode .table-card.playing {
+            background: rgba(99,102,241,0.1) !important;
+            border-color: rgba(99,102,241,0.6) !important;
+            box-shadow: none !important;
         }
     </style>
 </head>
@@ -1323,7 +1334,7 @@ admin_html = """<!DOCTYPE html>
                                     <div style="width: 44px; height: 44px; background: #eff6ff; color: #2563eb; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 22px;">🏪</div>
                                     <div>
                                         <div style="font-size: 18px; font-weight: 700; color: #0f172a; display: flex; align-items: center; gap: 8px;">
-                                            <span>Bida Chain — HQ</span>
+                                            <span>Bida Club</span>
                                         </div>
                                         <div style="font-size: 13px; color: #64748b; margin-top: 2px;">
                                             Tong quan toan he thong · <span id="hq-store-count-label">3 chi nhanh</span>
@@ -1770,6 +1781,7 @@ admin_html = """<!DOCTYPE html>
                                 <tr style="border-bottom: 1px solid rgba(255,255,255,0.15); color: #a5b4fc; font-weight: 700;">
                                     <th style="padding: 10px 8px;">MÃ HĐ</th>
                                     <th style="padding: 10px 8px;">TÊN BÀN</th>
+                                    <th style="padding: 10px 8px;">NGÀY GIỜ</th>
                                     <th style="padding: 10px 8px;">THỜI GIAN</th>
                                     <th style="padding: 10px 8px;">TIỀN GIỜ</th>
                                     <th style="padding: 10px 8px;">DỊCH VỤ</th>
@@ -1777,7 +1789,7 @@ admin_html = """<!DOCTYPE html>
                                 </tr>
                             </thead>
                             <tbody id="admin-revenue-body">
-                                <tr><td colspan="6" style="text-align:center; padding:16px; color:#a5b4fc;">Đang tải dữ liệu doanh thu...</td></tr>
+                                <tr><td colspan="7" style="text-align:center; padding:16px; color:#a5b4fc;">Đang tải dữ liệu doanh thu...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -2364,6 +2376,17 @@ admin_html = """<!DOCTYPE html>
             xhr.send(JSON.stringify({ session_ids: ids }));
         }
 
+        function updateStatusBanner(connected, message, icon) {
+            var banner = document.getElementById("status-banner");
+            var bIcon = document.getElementById("banner-icon");
+            var bText = document.getElementById("banner-text");
+            if (banner) {
+                banner.className = connected ? "status-banner status-connected" : "status-banner status-error";
+            }
+            if (bIcon && icon) bIcon.innerHTML = icon;
+            if (bText && message) bText.textContent = message;
+        }
+
         // === LOAD TABLES DATA ===
         function loadTables(callback) {
             var xhr = makeAuthXHR();
@@ -2377,24 +2400,14 @@ admin_html = """<!DOCTYPE html>
                         renderTablesGrid(tables);
                         syncStreamStates(tables);
                         // Khi load ban thanh cong => server dang hoat dong => chuyen banner xanh
-                        if (statusBanner.className.indexOf("status-connected") === -1) {
-                            statusDot.className = "dot dot-green";
-                            statusLabel.textContent = "Dang hoat dong";
-                            statusBanner.className = "status-banner status-connected";
-                            bannerIcon.innerHTML = "&#9889;";
-                            bannerText.textContent = "He thong dang hoat dong - AI Camera dang giam sat";
-                        }
+                        updateStatusBanner(true, "Hệ thống đang hoạt động - AI Camera đang giám sát", "&#9889;");
                         if (typeof callback === 'function') callback();
                     } catch(e) {
                         console.warn("loadTables parse error:", e);
                     }
                 } else {
                     // Server loi, hien thi trang thai loi
-                    statusDot.className = "dot dot-red";
-                    statusLabel.textContent = "Loi ket noi";
-                    statusBanner.className = "status-banner status-error";
-                    bannerIcon.innerHTML = "&#9888;";
-                    bannerText.textContent = "Loi ket noi server (HTTP " + xhr.status + ") - Dang thu lai...";
+                    updateStatusBanner(false, "Lỗi kết nối server (HTTP " + xhr.status + ") - Đang thử lại...", "&#9888;");
                 }
                 setTimeout(loadTables, 3000);
             };
@@ -3302,6 +3315,12 @@ admin_html = """<!DOCTYPE html>
 
         function openInventoryModal() {
             document.getElementById("inventory-modal").style.display = "flex";
+            var todayStr = new Date().toISOString().split('T')[0];
+            var startEl = document.getElementById("admin-rev-start-date");
+            var endEl = document.getElementById("admin-rev-end-date");
+            if (startEl && !startEl.value) startEl.value = todayStr;
+            if (endEl && !endEl.value) endEl.value = todayStr;
+
             var role = localStorage.getItem("user_role");
             var invSel = document.getElementById("inventory-store-select");
             if (role === "SUPER_ADMIN" && invSel) {
@@ -3639,9 +3658,38 @@ admin_html = """<!DOCTYPE html>
             loadAdminStoreRevenue();
         }
 
+        function normalizeInputDate(dateStr) {
+            if (!dateStr) return "";
+            var parts = dateStr.split('-');
+            if (parts.length === 3) {
+                var y = parseInt(parts[0]);
+                var m = parseInt(parts[1]);
+                var d = parseInt(parts[2]);
+                var nowMonth = new Date().getMonth() + 1;
+                if (m !== nowMonth && d === nowMonth && m <= 31) {
+                    var correctedM = String(d).padStart(2, '0');
+                    var correctedD = String(m).padStart(2, '0');
+                    return y + "-" + correctedM + "-" + correctedD;
+                }
+            }
+            return dateStr;
+        }
+
+        function formatDateDisplayVN(isoDateStr) {
+            if (!isoDateStr) return "";
+            var parts = isoDateStr.split('-');
+            if (parts.length === 3) {
+                return parts[2] + "/" + parts[1] + "/" + parts[0];
+            }
+            return isoDateStr;
+        }
+
         function filterAdminRevCustom() {
             var startVal = document.getElementById("admin-rev-start-date").value;
             var endVal = document.getElementById("admin-rev-end-date").value;
+            
+            startVal = normalizeInputDate(startVal);
+            endVal = normalizeInputDate(endVal);
             
             currentAdminRevFilter.preset = '';
             currentAdminRevFilter.start_date = startVal;
@@ -3661,7 +3709,9 @@ admin_html = """<!DOCTYPE html>
         function loadAdminStoreRevenue() {
             var container = document.getElementById("admin-revenue-body");
             if (!container) return;
-            container.innerHTML = "<tr><td colspan='6' style='text-align:center; padding:16px; color:#a5b4fc;'>Đang tải dữ liệu doanh thu...</td></tr>";
+            if (!container.children.length || container.innerHTML.trim() === "") {
+                container.innerHTML = "<tr><td colspan='7' style='text-align:center; padding:16px; color:#a5b4fc;'>Đang tải dữ liệu doanh thu...</td></tr>";
+            }
             
             var invSel = document.getElementById("inventory-store-select");
             var storeId = invSel && invSel.value ? invSel.value : "";
@@ -3689,14 +3739,12 @@ admin_html = """<!DOCTYPE html>
                         if (currentAdminRevFilter.preset === 'week') labelText = "Tuần này";
                         else if (currentAdminRevFilter.preset === 'month') labelText = "Tháng này";
                         else if (currentAdminRevFilter.preset === 'year') labelText = "Năm nay";
-                        else if (data.start_date && data.end_date) labelText = "từ " + data.start_date + " đến " + data.end_date;
+                        else if (data.start_date && data.end_date) labelText = "từ " + formatDateDisplayVN(data.start_date) + " đến " + formatDateDisplayVN(data.end_date);
                         
                         var titleEl = document.getElementById("admin-revenue-list-title");
                         if (titleEl) titleEl.textContent = "Chi tiết hóa đơn lượt chơi (" + labelText + "):";
 
-                        var summaryEl = document.getElementById("admin-revenue-summary");
-                        if (summaryEl) {
-                            summaryEl.innerHTML =
+                        var newSummaryHtml =
                             "<div style='display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 12px;'>" +
                                 "<div style='background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px;'>" +
                                     "<div style='font-size: 11px; color: #94a3b8;'>Doanh thu (" + labelText + ")</div>" +
@@ -3715,29 +3763,36 @@ admin_html = """<!DOCTYPE html>
                                     "<div style='font-size: 18px; font-weight: 800; color: #c084fc;'>" + (data.session_count || 0) + " lượt</div>" +
                                 "</div>" +
                             "</div>";
+
+                        var summaryEl = document.getElementById("admin-revenue-summary");
+                        if (summaryEl && summaryEl.innerHTML !== newSummaryHtml) {
+                            summaryEl.innerHTML = newSummaryHtml;
                         }
                         
                         var sessions = data.sessions || [];
-                        if (sessions.length === 0) {
-                            container.innerHTML = "<tr><td colspan='6' style='text-align:center; padding:16px; color:#94a3b8;'>Không có lượt chơi hoàn tất nào trong khoảng thời gian này.</td></tr>";
-                            return;
-                        }
-                        
                         var html = "";
-                        sessions.forEach(function(s) {
-                            html +=
-                            "<tr style='border-bottom: 1px solid rgba(255,255,255,0.08);'>" +
-                                "<td style='padding: 10px 8px; font-weight: bold; color: #fbbf24;'>#" + s.id + "</td>" +
-                                "<td style='padding: 10px 8px; font-weight: bold; color: #f8fafc;'>" + s.table_name + "</td>" +
-                                "<td style='padding: 10px 8px; color: #cbd5e1;'>" + s.total_minutes + " phút</td>" +
-                                "<td style='padding: 10px 8px; color: #34d399; font-weight: bold;'>" + formatMoneyCompact(s.play_fee) + "</td>" +
-                                "<td style='padding: 10px 8px; color: #fbbf24; font-weight: bold;'>" + formatMoneyCompact(s.service_fee) + "</td>" +
-                                "<td style='padding: 10px 8px; color: #34d399; font-weight: 800;'>" + formatMoneyFull(s.total_amount) + "</td>" +
-                            "</tr>";
-                        });
-                        container.innerHTML = html;
+                        if (sessions.length === 0) {
+                            html = "<tr><td colspan='7' style='text-align:center; padding:16px; color:#94a3b8;'>Không có lượt chơi hoàn tất nào trong khoảng thời gian này.</td></tr>";
+                        } else {
+                            sessions.forEach(function(s) {
+                                var dateStr = formatDateFull(s.end_time || s.start_time);
+                                html +=
+                                "<tr style='border-bottom: 1px solid rgba(255,255,255,0.08);'>" +
+                                    "<td style='padding: 10px 8px; font-weight: bold; color: #fbbf24;'>#" + s.id + "</td>" +
+                                    "<td style='padding: 10px 8px; font-weight: bold; color: #f8fafc;'>" + s.table_name + "</td>" +
+                                    "<td style='padding: 10px 8px; color: #a5b4fc; font-weight: 600; white-space: nowrap;'>" + dateStr + "</td>" +
+                                    "<td style='padding: 10px 8px; color: #cbd5e1;'>" + s.total_minutes + " phút</td>" +
+                                    "<td style='padding: 10px 8px; color: #34d399; font-weight: bold;'>" + formatMoneyCompact(s.play_fee) + "</td>" +
+                                    "<td style='padding: 10px 8px; color: #fbbf24; font-weight: bold;'>" + formatMoneyCompact(s.service_fee) + "</td>" +
+                                    "<td style='padding: 10px 8px; color: #34d399; font-weight: 800;'>" + formatMoneyFull(s.total_amount) + "</td>" +
+                                "</tr>";
+                            });
+                        }
+                        if (container.innerHTML !== html) {
+                            container.innerHTML = html;
+                        }
                     } catch(e) {
-                        container.innerHTML = "<tr><td colspan='6' style='text-align:center; padding:16px; color:#f87171;'>Lỗi tải dữ liệu doanh thu.</td></tr>";
+                        container.innerHTML = "<tr><td colspan='7' style='text-align:center; padding:16px; color:#f87171;'>Lỗi tải dữ liệu doanh thu.</td></tr>";
                     }
                 }
             };
@@ -4208,6 +4263,19 @@ admin_html = """<!DOCTYPE html>
                     xhr.setRequestHeader('Authorization', 'Bearer ' + token);
                 }
             };
+            xhr.addEventListener("readystatechange", function() {
+                if (xhr.readyState === 4 && xhr.status === 401) {
+                    try {
+                        var res = JSON.parse(xhr.responseText);
+                        if (res && res.detail && typeof res.detail === 'string' && res.detail.indexOf("SINGLE_SESSION_DISPLACED") !== -1) {
+                            localStorage.removeItem("jwt_token");
+                            localStorage.removeItem("user_role");
+                            alert("🔒 TÀI KHOẢN ĐÃ ĐƯỢC ĐĂNG NHẬP Ở MÁY KHÁC!\\n\\nTài khoản của bạn vừa được đăng nhập từ một thiết bị khác. Bạn đã bị đăng xuất khỏi thiết bị này.");
+                            if (typeof showLoginModal === "function") showLoginModal();
+                        }
+                    } catch(e) {}
+                }
+            });
             return xhr;
         }
 
@@ -4222,11 +4290,11 @@ admin_html = """<!DOCTYPE html>
                 var ws = new WebSocket(wsUrl);
                 
                 ws.onopen = function() {
-                    statusDot.className = "dot dot-green";
-                    statusLabel.textContent = "Dang hoat dong";
-                    statusBanner.className = "status-banner status-connected";
-                    bannerIcon.innerHTML = "&#9889;";
-                    bannerText.textContent = "He thong dang hoat dong - AI Camera dang giam sat (WebSocket Live)";
+                    if (statusDot) statusDot.className = "dot dot-green";
+                    if (statusLabel) statusLabel.textContent = "Đang hoạt động";
+                    if (statusBanner) statusBanner.className = "status-banner status-connected";
+                    if (bannerIcon) bannerIcon.innerHTML = "&#9889;";
+                    if (bannerText) bannerText.textContent = "Hệ thống đang hoạt động - AI Camera đang giám sát (WebSocket Live)";
                 };
                 
                 ws.onmessage = function(event) {
@@ -4236,28 +4304,20 @@ admin_html = """<!DOCTYPE html>
                             renderEvent(data);
                         }
                     } catch(e) {}
+                    if (typeof refreshAllRealtimeData === "function") {
+                        refreshAllRealtimeData();
+                    }
                 };
                 
                 ws.onclose = function(e) {
-                    if (statusBanner.className.indexOf("status-connected") === -1) {
-                        statusDot.className = "dot dot-red";
-                        statusLabel.textContent = "Mat ket noi";
-                        statusBanner.className = "status-banner status-error";
-                        bannerIcon.innerHTML = "&#9888;";
-                        bannerText.textContent = "Mất kết nối (" + e.code + "). Đang thử lại hoặc dùng HTTP Polling...";
-                    }
                     setTimeout(connectWebSocket, 3000);
                 };
                 
                 ws.onerror = function(err) {
-                    if (statusBanner.className.indexOf("status-connected") === -1) {
-                        statusDot.className = "dot dot-red";
-                        statusBanner.className = "status-banner status-error";
-                        bannerText.textContent = "Lỗi đường truyền WebSocket. Đang dùng HTTP Polling thay thế!";
-                    }
+                    try { ws.close(); } catch(e) {}
                 };
             } catch(ex) {
-                bannerText.textContent = "JS Error: " + ex.message;
+                console.warn("WS error:", ex);
             }
         }
 
@@ -4779,7 +4839,7 @@ admin_html = """<!DOCTYPE html>
                 var subEl = document.getElementById("nav-header-sub");
                 var roleBadge = document.getElementById("role-badge-display");
                 if (payload && (payload.role === "SUPER_ADMIN" || !payload.store_id)) {
-                    if (titleEl) titleEl.innerHTML = "🏢 TRỤ SỞ CHÍNH HQ <span style='font-size:12px; background:#f59e0b; color:#0f172a; padding:2px 8px; border-radius:4px; font-weight:bold; margin-left:8px; vertical-align:middle;'>READ-ONLY</span>";
+                    if (titleEl) titleEl.innerHTML = "🏢 TRỤ SỞ CHÍNH <span style='font-size:12px; background:#f59e0b; color:#0f172a; padding:2px 8px; border-radius:4px; font-weight:bold; margin-left:8px; vertical-align:middle;'>READ-ONLY</span>";
                     if (subEl) subEl.textContent = "Chế độ Giám sát Toàn chuỗi - Vô hiệu hóa thao tác sửa nghiệp vụ chi nhánh";
                     if (roleBadge) {
                         roleBadge.innerHTML = "👤 " + (payload.username || "admin") + " | 🏢 Trụ Sở HQ";
@@ -4846,6 +4906,21 @@ admin_html = """<!DOCTYPE html>
             if (n >= 1000000) return (n / 1000000).toFixed(1) + "tr";
             if (n >= 1000) return (n / 1000).toFixed(0) + "k";
             return n + " ₫";
+        }
+        function formatDateFull(isoStr) {
+            if (!isoStr) return "-";
+            try {
+                var d = new Date(isoStr);
+                if (isNaN(d.getTime())) return isoStr;
+                var day = String(d.getDate()).padStart(2, '0');
+                var month = String(d.getMonth() + 1).padStart(2, '0');
+                var year = d.getFullYear();
+                var hours = String(d.getHours()).padStart(2, '0');
+                var mins = String(d.getMinutes()).padStart(2, '0');
+                return day + "/" + month + "/" + year + " " + hours + ":" + mins;
+            } catch(e) {
+                return isoStr;
+            }
         }
 
         // ===== HQ OVERVIEW & STORE REVENUE DASHBOARD LOGIC (REAL-TIME) =====
@@ -4982,18 +5057,31 @@ admin_html = """<!DOCTYPE html>
             xhr2.send();
         }
 
-        // Auto reload real-time moi 10 giay
-        setInterval(function() {
+        // ===== REAL-TIME AUTO SYNC ENGINE (WEBSOCKET + 3-SECOND HEARTBEAT) =====
+        function refreshAllRealtimeData() {
             var hqPanel = document.getElementById("hq-revenue-panel");
             if (hqPanel && hqPanel.style.display !== "none") {
                 loadHQOverviewData();
             }
-        }, 10000);
+            var revTab = document.getElementById("tab-content-revenue");
+            if (revTab && revTab.style.display !== "none") {
+                loadAdminStoreRevenue();
+            }
+            if (typeof loadTables === "function") {
+                loadTables();
+            }
+        }
+
+        // Auto heartbeat refresh moi 3 giay
+        setInterval(function() {
+            refreshAllRealtimeData();
+        }, 3000);
 
         // Load ban dau
         applyRoleUI();
         loadClips();
         loadTables();
+        initAdminWebSocket();
         
         function showLoginModal() {
             var modal = document.getElementById("jwt-login-modal");
@@ -5025,7 +5113,16 @@ admin_html = """<!DOCTYPE html>
                         location.reload();
                     }
                 } else {
-                    if (errEl) errEl.textContent = "Sai tài khoản hoặc mật khẩu!";
+                    try {
+                        var res = JSON.parse(xhr.responseText);
+                        if (res && res.detail && typeof res.detail === 'string') {
+                            if (errEl) errEl.textContent = res.detail;
+                        } else {
+                            if (errEl) errEl.textContent = "Sai tài khoản hoặc mật khẩu!";
+                        }
+                    } catch(e) {
+                        if (errEl) errEl.textContent = "Sai tài khoản hoặc mật khẩu!";
+                    }
                 }
             };
             xhr.send(JSON.stringify({ username: u, password: p }));
@@ -5055,5 +5152,14 @@ admin_html = """<!DOCTYPE html>
             </div>
         </div>
     </div>
+    
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            var role = localStorage.getItem("user_role");
+            if (role !== "SUPER_ADMIN") {
+                document.body.classList.add("manager-mode");
+            }
+        });
+    </script>
 </body>
 </html>"""

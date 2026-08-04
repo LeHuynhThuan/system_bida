@@ -156,12 +156,13 @@ async def websocket_endpoint(websocket: WebSocket, token: Optional[str] = None):
         role_str = str(payload.get("role", "STORE_MANAGER")).upper()
         is_hq = (role_str == "SUPER_ADMIN")
         token_store_id = payload.get("store_id")
+        sid = payload.get("sid")
         if not is_hq and token_store_id is None:
             token_store_id = 1
         elif token_store_id is not None:
             token_store_id = int(token_store_id)
             
-        await websocket_manager.connect(websocket, store_id=token_store_id, is_hq=is_hq)
+        await websocket_manager.connect(websocket, store_id=token_store_id, is_hq=is_hq, sid=sid)
         try:
             while True:
                 data = await websocket.receive_text()
