@@ -27,11 +27,14 @@ client_messages_store = {}
 router = APIRouter(prefix="/api", tags=["Reports & Media"])
 
 @router.get("/reports/revenue")
-def get_revenue_report(start_date: str = None, end_date: str = None):
+def get_revenue_report(start_date: str = None, end_date: str = None, store_id: int = None):
     db = SessionLocal()
     try:
         query = db.query(PlaySession).filter(PlaySession.status == "COMPLETED")
         
+        if store_id:
+            query = query.filter(PlaySession.store_id == store_id)
+            
         if start_date:
             try:
                 start_dt = datetime.strptime(start_date, "%Y-%m-%d")

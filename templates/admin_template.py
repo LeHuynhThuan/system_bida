@@ -1415,10 +1415,10 @@ admin_html = """<!DOCTYPE html>
 
                             <!-- Action Buttons Bottom -->
                             <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-                                <button onclick="openInventoryModal()" style="background: #ffffff; border: 1px solid #cbd5e1; color: #1e293b; padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                                <button onclick="openBranchRevenueDetailModal()" style="background: #ffffff; border: 1px solid #cbd5e1; color: #1e293b; padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;">
                                     🔍 Xem chi tiet chi nhanh
                                 </button>
-                                <button onclick="exportHQReportCSV()" style="background: #ffffff; border: 1px solid #cbd5e1; color: #1e293b; padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                                <button onclick="openReportModal()" style="background: #ffffff; border: 1px solid #cbd5e1; color: #1e293b; padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;">
                                     📥 Xuat bao cao
                                 </button>
                                 <button onclick="alert('He thong dang mo rong. Lien he ky thuat de cap phat chi nhanh moi!')" style="background: #ffffff; border: 1px solid #cbd5e1; color: #1e293b; padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;">
@@ -1493,6 +1493,12 @@ admin_html = """<!DOCTYPE html>
             </div>
             
             <div style="display: flex; flex-direction: column; gap: 12px; color: white;">
+                <div id="report-store-container" style="display: block;">
+                    <label style="font-size: 13px; font-weight: 600; color: #a5b4fc; display: block; margin-bottom: 4px;">Chi nhánh <span style="color: #ef4444;">*</span>:</label>
+                    <select id="report-store-select" style="width: 100%; height: 40px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white; padding: 0 12px; font-size: 14px; outline: none;">
+                        <option value="">-- Bắt buộc chọn chi nhánh --</option>
+                    </select>
+                </div>
                 <div>
                     <label style="font-size: 13px; font-weight: 600; color: #a5b4fc; display: block; margin-bottom: 4px;">Từ ngày:</label>
                     <input type="date" id="report-start-date" style="width: 100%; height: 40px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white; padding: 0 12px; font-size: 14px; outline: none; color-scheme: dark;">
@@ -1501,15 +1507,30 @@ admin_html = """<!DOCTYPE html>
                     <label style="font-size: 13px; font-weight: 600; color: #a5b4fc; display: block; margin-bottom: 4px;">Đến ngày:</label>
                     <input type="date" id="report-end-date" style="width: 100%; height: 40px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white; padding: 0 12px; font-size: 14px; outline: none; color-scheme: dark;">
                 </div>
-                <div id="report-store-container" style="display: none;">
-                    <label style="font-size: 13px; font-weight: 600; color: #a5b4fc; display: block; margin-bottom: 4px;">Chi nhánh:</label>
-                    <select id="report-store-select" style="width: 100%; height: 40px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; color: white; padding: 0 12px; font-size: 14px; outline: none;">
-                        <option value="">Tất cả chi nhánh</option>
-                    </select>
-                </div>
+                <div id="report-error-msg" style="color: #f87171; font-size: 13px; font-weight: 600; display: none; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); padding: 8px 12px; border-radius: 6px;"></div>
             </div>
             
             <button onclick="downloadRevenueReport()" style="margin-top: 8px; height: 44px; border-radius: 8px; border: none; background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; font-weight: bold; font-size: 15px; cursor: pointer; transition: opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">📥 Tải file Excel (.csv)</button>
+        </div>
+    </div>
+
+    <!-- DETAILED BRANCH REVENUE MODAL -->
+    <div class="bill-modal-overlay" id="branch-revenue-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 1000; align-items: center; justify-content: center;">
+        <div class="card" style="width: 95%; max-width: 750px; background: #1e1b4b; border: 1px solid rgba(255,255,255,0.15); display: flex; flex-direction: column; gap: 16px; padding: 24px; max-height: 90vh; overflow-y: auto;">
+            <div style="font-size: 18px; font-weight: 800; color: #fbbf24; border-bottom: 2px dashed rgba(255,255,255,0.15); padding-bottom: 12px; display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span>🏢 CHI TIẾT DOANH THU CÁC CHI NHÁNH</span>
+                </div>
+                <span style="cursor: pointer; color: #9ca3af; font-size: 20px; font-weight: bold; padding: 4px;" onclick="closeBranchRevenueDetailModal()">✕</span>
+            </div>
+            
+            <div id="branch-revenue-detail-content" style="color: white; display: flex; flex-direction: column; gap: 14px;">
+                <div style="color: #a5b4fc; text-align: center; padding: 20px;">Đang tải thông tin doanh thu chi nhánh...</div>
+            </div>
+            
+            <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
+                <button onclick="closeBranchRevenueDetailModal()" style="padding: 10px 20px; background: rgba(255,255,255,0.1); color: white; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; font-weight: 600; cursor: pointer;">Đóng</button>
+            </div>
         </div>
     </div>
 
@@ -3067,57 +3088,76 @@ admin_html = """<!DOCTYPE html>
             document.getElementById("bill-modal").style.display = "none";
         }
 
-        // === REPORT FUNCTIONS ===
+        // === REPORT & BRANCH REVENUE FUNCTIONS ===
         function openReportModal() {
-            document.getElementById("report-modal").style.display = "flex";
+            var modal = document.getElementById("report-modal");
+            if (modal) modal.style.display = "flex";
             
+            var errEl = document.getElementById("report-error-msg");
+            if (errEl) { errEl.style.display = "none"; errEl.textContent = ""; }
+
             var today = new Date().toISOString().split('T')[0];
-            document.getElementById("report-start-date").value = today;
-            document.getElementById("report-end-date").value = today;
+            var startEl = document.getElementById("report-start-date");
+            var endEl = document.getElementById("report-end-date");
+            if (startEl) startEl.value = today;
+            if (endEl) endEl.value = today;
             
-            var role = localStorage.getItem("user_role");
             var container = document.getElementById("report-store-container");
-            if (role === "SUPER_ADMIN") {
-                if (container) container.style.display = "block";
-                var sel = document.getElementById("report-store-select");
-                if (sel && sel.options.length <= 1) {
-                    var xhr = makeAuthXHR();
-                    xhr.open("GET", "/api/stores", true);
-                    xhr.onreadystatechange = function() {
-                        if (xhr.readyState === 4 && xhr.status === 200) {
-                            try {
-                                var res = JSON.parse(xhr.responseText);
-                                if (res.data) {
-                                    res.data.forEach(function(s) {
-                                        var opt = document.createElement("option");
-                                        opt.value = s.id;
-                                        opt.textContent = s.name;
-                                        sel.appendChild(opt);
-                                    });
-                                }
-                            } catch(e) {}
-                        }
-                    };
-                    xhr.send();
-                }
-            } else {
-                if (container) container.style.display = "none";
+            if (container) container.style.display = "block";
+            
+            var sel = document.getElementById("report-store-select");
+            if (sel) {
+                sel.innerHTML = '<option value="">-- Bắt buộc chọn chi nhánh --</option><option value="ALL">Tất cả chi nhánh</option>';
+                var xhr = makeAuthXHR();
+                xhr.open("GET", "/api/stores", true);
+                xhr.onreadystatechange = function() {
+                    if (xhr.readyState === 4 && xhr.status === 200) {
+                        try {
+                            var res = JSON.parse(xhr.responseText);
+                            if (res.data) {
+                                res.data.forEach(function(s) {
+                                    var opt = document.createElement("option");
+                                    opt.value = s.id;
+                                    opt.textContent = s.name;
+                                    sel.appendChild(opt);
+                                });
+                            }
+                        } catch(e) {}
+                    }
+                };
+                xhr.send();
             }
         }
 
         function closeReportModal() {
-            document.getElementById("report-modal").style.display = "none";
+            var modal = document.getElementById("report-modal");
+            if (modal) modal.style.display = "none";
         }
         
         function downloadRevenueReport() {
+            var errEl = document.getElementById("report-error-msg");
+            if (errEl) { errEl.style.display = "none"; errEl.textContent = ""; }
+
+            var storeSelect = document.getElementById("report-store-select");
+            var storeVal = storeSelect ? storeSelect.value : "";
+            
+            if (!storeVal) {
+                if (errEl) {
+                    errEl.textContent = "⚠️ Vui lòng chọn chi nhánh trước khi xuất báo cáo!";
+                    errEl.style.display = "block";
+                } else {
+                    alert("Vui lòng chọn chi nhánh trước khi xuất báo cáo!");
+                }
+                return;
+            }
+
             var startDate = document.getElementById("report-start-date").value;
             var endDate = document.getElementById("report-end-date").value;
             var url = "/api/reports/revenue";
             var params = [];
             if (startDate) params.push("start_date=" + startDate);
             if (endDate) params.push("end_date=" + endDate);
-            var storeVal = document.getElementById("report-store-select") ? document.getElementById("report-store-select").value : "";
-            if (storeVal) params.push("store_id=" + storeVal);
+            if (storeVal && storeVal !== "ALL") params.push("store_id=" + storeVal);
             
             if (params.length > 0) {
                 url += "?" + params.join("&");
@@ -3137,6 +3177,70 @@ admin_html = """<!DOCTYPE html>
                 document.body.removeChild(a);
             });
             closeReportModal();
+        }
+
+        // === BRANCH REVENUE DETAILS MODAL FUNCTIONS ===
+        function openBranchRevenueDetailModal() {
+            var modal = document.getElementById("branch-revenue-modal");
+            if (modal) modal.style.display = "flex";
+            loadBranchRevenueDetails();
+        }
+
+        function closeBranchRevenueDetailModal() {
+            var modal = document.getElementById("branch-revenue-modal");
+            if (modal) modal.style.display = "none";
+        }
+
+        function loadBranchRevenueDetails() {
+            var container = document.getElementById("branch-revenue-detail-content");
+            if (!container) return;
+            container.innerHTML = "<div style='color:#a5b4fc; text-align:center; padding:20px;'>Đang tải thông tin doanh thu chi nhánh...</div>";
+            
+            var xhr = makeAuthXHR();
+            xhr.open("GET", "/api/hq/overview", true);
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    try {
+                        var res = JSON.parse(xhr.responseText);
+                        var overview = res.data || {};
+                        var stores = overview.stores_breakdown || [];
+                        
+                        if (stores.length === 0) {
+                            container.innerHTML = "<div style='color:#94a3b8; text-align:center; padding:20px;'>Chưa có dữ liệu chi nhánh.</div>";
+                            return;
+                        }
+                        
+                        var html = "";
+                        stores.forEach(function(s) {
+                            var statusBadge = s.status === "Online" 
+                                ? "<span style='background:#f0fdf4; color:#15803d; padding:3px 10px; border-radius:6px; font-size:12px; font-weight:700;'>Online</span>"
+                                : "<span style='background:#fef2f2; color:#b91c1c; padding:3px 10px; border-radius:6px; font-size:12px; font-weight:700;'>Offline</span>";
+                            
+                            html +=
+                            "<div style='background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; padding: 18px; display: flex; flex-direction: column; gap: 12px;'>" +
+                                "<div style='display: flex; justify-content: space-between; align-items: center; border-bottom: 1px dashed rgba(255,255,255,0.1); padding-bottom: 8px;'>" +
+                                    "<div style='font-size: 16px; font-weight: 700; color: #fbbf24;'>" + s.name + " (Mã CN: " + s.store_id + ")</div>" +
+                                    statusBadge +
+                                "</div>" +
+                                "<div style='display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;'>" +
+                                    "<div style='background: rgba(0,0,0,0.3); padding: 12px; border-radius: 8px;'>" +
+                                        "<div style='font-size: 12px; color: #94a3b8; margin-bottom: 4px;'>Doanh thu hôm nay</div>" +
+                                        "<div style='font-size: 20px; font-weight: 800; color: #34d399;'>" + formatMoneyFull(s.today_revenue || 0) + "</div>" +
+                                    "</div>" +
+                                    "<div style='background: rgba(0,0,0,0.3); padding: 12px; border-radius: 8px;'>" +
+                                        "<div style='font-size: 12px; color: #94a3b8; margin-bottom: 4px;'>Số bàn hoạt động</div>" +
+                                        "<div style='font-size: 20px; font-weight: 800; color: #60a5fa;'>" + (s.active_tables || 0) + " / " + (s.total_tables || 0) + " bàn</div>" +
+                                    "</div>" +
+                                "</div>" +
+                            "</div>";
+                        });
+                        container.innerHTML = html;
+                    } catch(e) {
+                        container.innerHTML = "<div style='color:#f87171; text-align:center; padding:20px;'>Lỗi hiển thị dữ liệu doanh thu.</div>";
+                    }
+                }
+            };
+            xhr.send();
         }
 
         // === INVENTORY MANAGEMENT FUNCTIONS ===
