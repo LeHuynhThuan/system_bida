@@ -1415,7 +1415,7 @@ admin_html = """<!DOCTYPE html>
 
                             <!-- Action Buttons Bottom -->
                             <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-                                <button onclick="openBranchRevenueDetailModal()" style="background: #ffffff; border: 1px solid #cbd5e1; color: #1e293b; padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                                <button onclick="openInventoryModal()" style="background: #ffffff; border: 1px solid #cbd5e1; color: #1e293b; padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;">
                                     🔍 Xem chi tiet chi nhanh
                                 </button>
                                 <button onclick="openReportModal()" style="background: #ffffff; border: 1px solid #cbd5e1; color: #1e293b; padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px;">
@@ -1631,6 +1631,7 @@ admin_html = """<!DOCTYPE html>
             <div style="display: flex; gap: 10px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px;">
                 <button id="tab-btn-products" onclick="switchInventoryTab('products')" style="padding: 8px 16px; border-radius: 8px; border: none; background: #6366f1; color: white; font-weight: bold; cursor: pointer;">🍔 Quản lý Thực đơn</button>
                 <button id="tab-btn-tables" onclick="switchInventoryTab('tables')" style="padding: 8px 16px; border-radius: 8px; border: none; background: transparent; color: #9ca3af; font-weight: bold; cursor: pointer;">🎱 Quản lý Bàn Bida</button>
+                <button id="tab-btn-revenue" onclick="switchInventoryTab('revenue')" style="padding: 8px 16px; border-radius: 8px; border: none; background: transparent; color: #9ca3af; font-weight: bold; cursor: pointer;">💰 Doanh Thu Chi Nhánh</button>
             </div>
 
             <div id="inventory-store-container" style="display: none; margin-bottom: 16px; background: rgba(30,41,59,0.8); padding: 12px; border-radius: 8px; border: 1px solid #f59e0b;">
@@ -1734,6 +1735,31 @@ admin_html = """<!DOCTYPE html>
                             </thead>
                             <tbody id="inventory-tables-body">
                                 <!-- Tables listed here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: REVENUE -->
+            <div id="tab-content-revenue" style="display: none;">
+                <div id="admin-revenue-summary"></div>
+                <div style="font-size: 13px; color: #d1d5db; margin-top: 10px;">
+                    <div style="font-weight: 700; color: #fbbf24; margin-bottom: 8px;">Chi tiết hóa đơn lượt chơi hôm nay:</div>
+                    <div style="max-height: 280px; overflow-y: auto; background: rgba(0,0,0,0.25); border-radius: 12px; border: 1px solid rgba(255,255,255,0.06);">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 12px; text-align: left;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.15); color: #a5b4fc; font-weight: 700;">
+                                    <th style="padding: 10px 8px;">MÃ HĐ</th>
+                                    <th style="padding: 10px 8px;">TÊN BÀN</th>
+                                    <th style="padding: 10px 8px;">THỜI GIAN</th>
+                                    <th style="padding: 10px 8px;">TIỀN GIỜ</th>
+                                    <th style="padding: 10px 8px;">DỊCH VỤ</th>
+                                    <th style="padding: 10px 8px;">TỔNG CỘNG</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admin-revenue-body">
+                                <tr><td colspan="6" style="text-align:center; padding:16px; color:#a5b4fc;">Đang tải dữ liệu doanh thu...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -3246,8 +3272,11 @@ admin_html = """<!DOCTYPE html>
         // === INVENTORY MANAGEMENT FUNCTIONS ===
         function onInventoryStoreChange() {
             var prodTab = document.getElementById('tab-content-products');
+            var revTab = document.getElementById('tab-content-revenue');
             if (prodTab && prodTab.style.display !== 'none') {
                 loadInventoryList();
+            } else if (revTab && revTab.style.display !== 'none') {
+                loadAdminStoreRevenue();
             } else {
                 loadAdminTables();
             }
@@ -3546,23 +3575,100 @@ admin_html = """<!DOCTYPE html>
         function switchInventoryTab(tabName) {
             document.getElementById('tab-content-products').style.display = tabName === 'products' ? 'block' : 'none';
             document.getElementById('tab-content-tables').style.display = tabName === 'tables' ? 'block' : 'none';
+            document.getElementById('tab-content-revenue').style.display = tabName === 'revenue' ? 'block' : 'none';
             
             var btnProd = document.getElementById('tab-btn-products');
             var btnTables = document.getElementById('tab-btn-tables');
+            var btnRev = document.getElementById('tab-btn-revenue');
             
-            if (tabName === 'products') {
-                btnProd.style.background = '#6366f1';
-                btnProd.style.color = 'white';
-                btnTables.style.background = 'transparent';
-                btnTables.style.color = '#9ca3af';
-                loadInventoryList();
-            } else {
-                btnTables.style.background = '#6366f1';
-                btnTables.style.color = 'white';
-                btnProd.style.background = 'transparent';
-                btnProd.style.color = '#9ca3af';
-                loadAdminTables();
+            if (btnProd) {
+                btnProd.style.background = tabName === 'products' ? '#6366f1' : 'transparent';
+                btnProd.style.color = tabName === 'products' ? 'white' : '#9ca3af';
             }
+            if (btnTables) {
+                btnTables.style.background = tabName === 'tables' ? '#6366f1' : 'transparent';
+                btnTables.style.color = tabName === 'tables' ? 'white' : '#9ca3af';
+            }
+            if (btnRev) {
+                btnRev.style.background = tabName === 'revenue' ? '#6366f1' : 'transparent';
+                btnRev.style.color = tabName === 'revenue' ? 'white' : '#9ca3af';
+            }
+
+            if (tabName === 'products') {
+                loadInventoryList();
+            } else if (tabName === 'tables') {
+                loadAdminTables();
+            } else if (tabName === 'revenue') {
+                loadAdminStoreRevenue();
+            }
+        }
+
+        function loadAdminStoreRevenue() {
+            var container = document.getElementById("admin-revenue-body");
+            if (!container) return;
+            container.innerHTML = "<tr><td colspan='6' style='text-align:center; padding:16px; color:#a5b4fc;'>Đang tải dữ liệu doanh thu...</td></tr>";
+            
+            var invSel = document.getElementById("inventory-store-select");
+            var storeId = invSel && invSel.value ? invSel.value : "";
+            var url = "/api/reports/store-revenue?preset=today";
+            if (storeId) url += "&store_id=" + storeId;
+            
+            var xhr = makeAuthXHR();
+            xhr.open("GET", url, true);
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    try {
+                        var res = JSON.parse(xhr.responseText);
+                        var data = res.data || {};
+                        
+                        var summaryEl = document.getElementById("admin-revenue-summary");
+                        if (summaryEl) {
+                            summaryEl.innerHTML =
+                            "<div style='display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 12px;'>" +
+                                "<div style='background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px;'>" +
+                                    "<div style='font-size: 11px; color: #94a3b8;'>Doanh thu hôm nay</div>" +
+                                    "<div style='font-size: 18px; font-weight: 800; color: #34d399;'>" + formatMoneyFull(data.total_revenue || 0) + "</div>" +
+                                "</div>" +
+                                "<div style='background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px;'>" +
+                                    "<div style='font-size: 11px; color: #94a3b8;'>Tiền giờ chơi</div>" +
+                                    "<div style='font-size: 18px; font-weight: 800; color: #60a5fa;'>" + formatMoneyFull(data.total_play_fee || 0) + "</div>" +
+                                "</div>" +
+                                "<div style='background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px;'>" +
+                                    "<div style='font-size: 11px; color: #94a3b8;'>Tiền dịch vụ</div>" +
+                                    "<div style='font-size: 18px; font-weight: 800; color: #fbbf24;'>" + formatMoneyFull(data.total_service_fee || 0) + "</div>" +
+                                "</div>" +
+                                "<div style='background: rgba(0,0,0,0.3); padding: 10px; border-radius: 8px;'>" +
+                                    "<div style='font-size: 11px; color: #94a3b8;'>Số lượt chơi</div>" +
+                                    "<div style='font-size: 18px; font-weight: 800; color: #c084fc;'>" + (data.session_count || 0) + " lượt</div>" +
+                                "</div>" +
+                            "</div>";
+                        }
+                        
+                        var sessions = data.sessions || [];
+                        if (sessions.length === 0) {
+                            container.innerHTML = "<tr><td colspan='6' style='text-align:center; padding:16px; color:#94a3b8;'>Hôm nay chưa có lượt chơi hoàn tất nào.</td></tr>";
+                            return;
+                        }
+                        
+                        var html = "";
+                        sessions.forEach(function(s) {
+                            html +=
+                            "<tr style='border-bottom: 1px solid rgba(255,255,255,0.08);'>" +
+                                "<td style='padding: 10px 8px; font-weight: bold; color: #fbbf24;'>#" + s.id + "</td>" +
+                                "<td style='padding: 10px 8px; font-weight: bold; color: #f8fafc;'>" + s.table_name + "</td>" +
+                                "<td style='padding: 10px 8px; color: #cbd5e1;'>" + s.total_minutes + " phút</td>" +
+                                "<td style='padding: 10px 8px; color: #34d399; font-weight: bold;'>" + formatMoneyCompact(s.play_fee) + "</td>" +
+                                "<td style='padding: 10px 8px; color: #fbbf24; font-weight: bold;'>" + formatMoneyCompact(s.service_fee) + "</td>" +
+                                "<td style='padding: 10px 8px; color: #34d399; font-weight: 800;'>" + formatMoneyFull(s.total_amount) + "</td>" +
+                            "</tr>";
+                        });
+                        container.innerHTML = html;
+                    } catch(e) {
+                        container.innerHTML = "<tr><td colspan='6' style='text-align:center; padding:16px; color:#f87171;'>Lỗi tải dữ liệu doanh thu.</td></tr>";
+                    }
+                }
+            };
+            xhr.send();
         }
 
         function loadAdminTables() {
